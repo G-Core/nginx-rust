@@ -1,0 +1,3 @@
+**/target
+nginx_derive/Cargo.lock
+nginx_module/Cargo.lock
