@@ -38,7 +38,7 @@ mod log;
 pub use log::Log;
 
 mod var;
-pub use var::{Variables, VarAccess, VarAccessMut};
+pub use var::{VarAccess, VarAccessMut, Variables};
 
 mod wrappers;
 pub use wrappers::{hex_dump, NgxConfig};
@@ -113,6 +113,21 @@ where
     }
 }
 
+impl<'a> ConfigValue<'a> for Vec<NgxStr<'a>> {
+    fn config_directive(
+        &mut self,
+        _conf: &'a mut NgxConfig,
+        value: NgxStr<'a>,
+    ) -> anyhow::Result<()> {
+        self.push(value);
+        Ok(())
+    }
+
+    fn merge(&mut self, other: &Self) {
+        self.extend_from_slice(&other[..]);
+    }
+}
+
 pub const NGX_CONF_OK: *mut i8 = std::ptr::null_mut();
 
 pub const NGX_RS_NULL_COMMAND: ngx_command_t = ngx_command_t {
@@ -156,8 +171,13 @@ unsafe extern "C" fn ngx_http_generic_handler<'a, H: HttpHandler<'a> + Default +
 ) -> isize {
     let Some(req) = HttpRequestAndContext::from_raw(req) else {
         // Logging to ngx_cycle->log as there is no request if it's null...
-        ngx_log_error(NGX_LOG_ERR as usize, (*ngx_cycle).log, 0, CStr::from_bytes_with_nul_unchecked(b"Null http request pointer\0"));
-        return NGX_ERROR as isize
+        ngx_log_error(
+            NGX_LOG_ERR as usize,
+            (*ngx_cycle).log,
+            0,
+            CStr::from_bytes_with_nul_unchecked(b"Null http request pointer\0"),
+        );
+        return NGX_ERROR as isize;
     };
     match <H as HttpHandler>::handle(req) {
         Ok(result) => result,
