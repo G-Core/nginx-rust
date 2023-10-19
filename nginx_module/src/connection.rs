@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::net::IpAddr;
 
 use crate::bindings::ngx_connection_t;

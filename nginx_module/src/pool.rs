@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::{ffi::c_void, ptr::addr_of};
 
 use crate::bindings::{ngx_palloc, ngx_pool_cleanup_add, ngx_pool_t};

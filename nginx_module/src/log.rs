@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::ffi::{CStr, CString};
 
 use crate::{
@@ -5,7 +9,7 @@ use crate::{
     NGX_LOG_ERR,
 };
 
-///
+/// 
 /// # Safety
 ///  
 ///  `log` should be a valid ngx_log_t pointer
@@ -16,6 +20,7 @@ pub(crate) unsafe fn ngx_log_error(level: usize, log: *mut ngx_log_t, err: ngx_e
     }
 }
 
+/// Abstraction over the log feature
 pub struct Log(ngx_log_t);
 
 impl Log {

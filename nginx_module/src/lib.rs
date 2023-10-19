@@ -23,6 +23,10 @@ pub use ngx_str::NgxStr;
 mod complex_value;
 pub use complex_value::ComplexValue;
 
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 mod http_request;
 pub use http_request::{HttpRequest, HttpRequestAndContext};
 

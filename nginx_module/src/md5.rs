@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::mem::MaybeUninit;
 
 use crate::bindings::{ngx_md5_final, ngx_md5_init, ngx_md5_t, ngx_md5_update};

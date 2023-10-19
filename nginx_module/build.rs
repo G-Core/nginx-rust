@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use bindgen::callbacks::{IntKind, ParseCallbacks};
 use std::{
     env,

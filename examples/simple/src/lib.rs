@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::ffi::{c_char, c_void};
 
 use nginx_derive::NginxConfig;

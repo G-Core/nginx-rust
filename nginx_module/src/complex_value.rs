@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::{marker::PhantomData, mem::MaybeUninit};
 
 use crate::{

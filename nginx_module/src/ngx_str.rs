@@ -1,3 +1,7 @@
+/*
+* Copyright 2023 G-Core Innovations SARL
+*/
+
 use std::{
     marker::PhantomData,
     ptr::{addr_of, addr_of_mut},

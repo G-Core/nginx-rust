@@ -9,7 +9,7 @@ cat << END                                            >> $NGX_MAKEFILE
 include $ngx_addon_dir/target/libsimple.d
 
 $ngx_addon_dir/target/libsimple.d: \$(ADDON_DEPS) $ngx_addon_dir/target/$RUST_PROFILE/libsimple.d
-	sed "s#$PWD/$ngx_addon_dir/target/$RUST_PROFILE/libsimple.a:#$ngx_addon_dir/target/$RUST_PROFILE/libsimple.a: \\\$\$(wildcard#" $ngx_addon_dir/target/$RUST_PROFILE/libsimple.d > $ngx_addon_dir/target/libsimple.d
+	sed "s#$ngx_addon_dir/target/$RUST_PROFILE/libsimple.a:#$ngx_addon_dir/target/$RUST_PROFILE/libsimple.a: \\\$\$(wildcard#" $ngx_addon_dir/target/$RUST_PROFILE/libsimple.d > $ngx_addon_dir/target/libsimple.d
 	sed -i '\$\$ s/\$\$/)/' $ngx_addon_dir/target/libsimple.d
 
 $ngx_addon_dir/target/$RUST_PROFILE/libsimple.a $ngx_addon_dir/target/$RUST_PROFILE/libsimple.d: \$(ADDON_DEPS)
