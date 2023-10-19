@@ -44,6 +44,14 @@ fn main() {
             .map(|subdir| format!("-I{nginx_root}/{subdir}")),
     );
 
+    if let Ok(includes) = env::var("NGINX_HEADERS") {
+        clang_args.extend(
+            includes
+                .split(' ')
+                .map(|subdir| format!("-I{nginx_root}/{subdir}")),
+        )
+    }
+
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
         .layout_tests(false)
