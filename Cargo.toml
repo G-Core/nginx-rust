@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "examples/simple"
+]
+
+[profile.release]
+debug = true

@@ -13,7 +13,6 @@ const INCLUDE_SUBDIRS: &[&str] = &[
     "src/http/",
     "src/http/v2/",
     "src/http/modules/",
-    "gcore/gclibhash/include/",
 ];
 
 const NGX_QUIC_INCLUDE_SUBDIRS: &[&str] = &["src/event/quic/", "src/http/v3/"];
@@ -65,10 +64,13 @@ fn main() {
 }
 
 fn search_nginx_root_folder() -> String {
-    fn check_nginx_root(path: &str) -> bool {
-        INCLUDE_SUBDIRS
-            .iter()
-            .all(|subdir| [path, subdir].iter().collect::<PathBuf>().is_dir())
+    fn check_nginx_root(path: &Path) -> bool {
+        INCLUDE_SUBDIRS.iter().all(|subdir| {
+            [path, Path::new(subdir)]
+                .iter()
+                .collect::<PathBuf>()
+                .is_dir()
+        })
     }
 
     let base_locations = [
@@ -81,23 +83,27 @@ fn search_nginx_root_folder() -> String {
     ];
 
     // First, try to find the include folders in any of the parent folders of this folder,
-    // This is the case when this is a submodule of nginx-gcdn
+    // This is the case when this is a submodule of nginx
     for base in base_locations {
         let folder = base.to_string();
-        if check_nginx_root(&folder) {
+        if check_nginx_root(Path::new(&folder)) {
             return folder;
         }
     }
 
-    // If we are not a nginx-gcdn submodule, try to find the folder side by side
+    // If we are not a nginx submodule, try to find the folder side by side
     for base in base_locations {
-        let folder = format!("{base}/nginx-gcdn");
-        if check_nginx_root(&folder) {
-            return folder;
+        for entry in std::fs::read_dir(base)
+            .expect("Cannot read directory")
+            .flatten()
+        {
+            if entry.path().is_dir() && check_nginx_root(&entry.path()) {
+                return entry.path().to_str().unwrap().to_owned();
+            }
         }
     }
 
-    panic!("We need to generate the Rust bindings from the Nginx header files but the Nginx folder cannot be found. Please git clone the ngxin-gcdn repo in any of these locations relative to this folder: {base_locations:?}");
+    panic!("We need to generate the Rust bindings from the Nginx header files but the Nginx folder cannot be found. Please git clone the nginx repo in any of these locations relative to this folder: {base_locations:?}");
 }
 
 #[derive(Debug)]

@@ -1,3 +1,5 @@
 **/target
 nginx_derive/Cargo.lock
 nginx_module/Cargo.lock
+nginx-1.25.2/
+nginx-1.25.2.zip
