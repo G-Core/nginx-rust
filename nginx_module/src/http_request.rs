@@ -174,6 +174,10 @@ impl<'a> HttpRequest<'a> {
         unsafe { NgxStr::from_raw(self.0.unparsed_uri) }
     }
 
+    pub fn uri_args(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.args) }
+    }
+
     pub fn server(&self) -> NgxStr {
         unsafe { NgxStr::from_raw(self.0.headers_in.server) }
     }
