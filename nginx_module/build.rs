@@ -96,8 +96,9 @@ fn search_nginx_root_folder() -> String {
 
     // First, try to find the include folders in any of the parent folders of this folder,
     // This is the case when this is a submodule of nginx
+    let manifest_dir = env!("CARGO_MANIFEST_DIR");
     for base in base_locations {
-        let folder = base.to_string();
+        let folder = format!("{manifest_dir}/{base}");
         if check_nginx_root(Path::new(&folder)) {
             return folder;
         }
@@ -105,6 +106,7 @@ fn search_nginx_root_folder() -> String {
 
     // If we are not a nginx submodule, try to find the folder side by side
     for base in base_locations {
+        let base = format!("{manifest_dir}/{base}");
         for entry in std::fs::read_dir(base)
             .expect("Cannot read directory")
             .flatten()
