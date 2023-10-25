@@ -1,6 +1,6 @@
 /*
-* Copyright 2023 G-Core Innovations SARL
-*/
+ * Copyright 2023 G-Core Innovations SARL
+ */
 
 use std::{marker::PhantomData, mem::MaybeUninit};
 
@@ -17,14 +17,14 @@ use super::{HttpRequest, NgxConfig, NgxStr};
 #[derive(Copy, Clone)]
 pub struct ComplexValue<'a> {
     inner: *mut ngx_http_complex_value_t,
-    phantom: PhantomData<&'a ()>,
+    _phantom: PhantomData<&'a ()>,
 }
 
 impl<'a> Default for ComplexValue<'a> {
     fn default() -> Self {
         Self {
             inner: std::ptr::null_mut(),
-            phantom: PhantomData,
+            _phantom: PhantomData,
         }
     }
 }

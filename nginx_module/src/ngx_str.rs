@@ -1,6 +1,6 @@
 /*
-* Copyright 2023 G-Core Innovations SARL
-*/
+ * Copyright 2023 G-Core Innovations SARL
+ */
 
 use std::{
     marker::PhantomData,

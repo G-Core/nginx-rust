@@ -1,6 +1,6 @@
 /*
-* Copyright 2023 G-Core Innovations SARL
-*/
+ * Copyright 2023 G-Core Innovations SARL
+ */
 
 #![allow(non_upper_case_globals, non_snake_case, dead_code, non_camel_case_types, clippy::all)]
 
