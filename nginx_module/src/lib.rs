@@ -46,7 +46,7 @@ mod var;
 pub use var::{VarAccess, VarAccessMut, Variables};
 
 mod wrappers;
-pub use wrappers::{hex_dump, NgxConfig};
+pub use wrappers::{hex_dump, IndexedVar, NgxConfig};
 
 pub trait Config {
     fn commands() -> &'static mut [ngx_command_t];

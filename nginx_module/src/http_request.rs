@@ -4,14 +4,18 @@
 
 use std::{marker::PhantomData, ops::Deref};
 
-use crate::bindings::{
-    ngx_http_parse_multi_header_lines, ngx_http_request_t, ngx_list_push, ngx_list_t, ngx_module_t,
-    ngx_table_elt_t,
-};
 #[cfg(not(nginx_version_1023000))]
 use crate::{
     bindings::{ngx_array_push, ngx_array_t, NGX_DECLINED, NGX_OK},
     wrappers::array_init,
+};
+use crate::{
+    bindings::{
+        ngx_http_get_indexed_variable, ngx_http_parse_multi_header_lines, ngx_http_request_t,
+        ngx_list_push, ngx_list_t, ngx_module_t, ngx_table_elt_t,
+    },
+    ngx_str_t,
+    wrappers::IndexedVar,
 };
 use crate::{connection::Connection, Log};
 
@@ -288,5 +292,27 @@ impl<'a> HttpRequest<'a> {
             (*cc).value = NgxStr::new_from_array(b"no-cache").inner();
         }
         Ok(())
+    }
+
+    pub fn get_indexed_var(&self, var: IndexedVar) -> Option<NgxStr> {
+        unsafe {
+            let var_value = ngx_http_get_indexed_variable(
+                &self.0 as *const ngx_http_request_t as *mut ngx_http_request_t,
+                var.0 as usize,
+            );
+            if var_value.is_null() {
+                None
+            } else {
+                let var_value = &*var_value;
+                if var_value.valid() != 0 && var_value.not_found() == 0 {
+                    Some(NgxStr::from_raw(ngx_str_t {
+                        len: var_value.len() as usize,
+                        data: var_value.data,
+                    }))
+                } else {
+                    None
+                }
+            }
+        }
     }
 }

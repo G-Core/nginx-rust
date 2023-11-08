@@ -7,7 +7,7 @@ use std::{marker::PhantomData, ptr::NonNull};
 use bitflags::bitflags;
 
 use crate::{
-    bindings::{self, ngx_conf_t, ngx_hex_dump, ngx_http_variable_t},
+    bindings::{self, ngx_conf_t, ngx_hex_dump, ngx_http_get_variable_index, ngx_http_variable_t},
     Log, NgxStr, Pool,
 };
 
@@ -25,6 +25,9 @@ pub struct NgxConfig<'pool> {
     inner: ngx_conf_t,
     phantom: PhantomData<&'pool ()>,
 }
+
+#[derive(Clone, Copy, Debug)]
+pub struct IndexedVar(pub(crate) isize);
 
 impl<'pool> NgxConfig<'pool> {
     ///
@@ -67,6 +70,15 @@ impl<'pool> NgxConfig<'pool> {
 
     pub fn log(&self) -> &Log {
         unsafe { Log::new(self.inner.log) }
+    }
+
+    pub fn get_indexed_var(&mut self, mut var_name: NgxStr) -> Option<IndexedVar> {
+        let index = unsafe { ngx_http_get_variable_index(&mut self.inner, var_name.as_mut_ptr()) };
+        if index < 0 {
+            None
+        } else {
+            Some(IndexedVar(index))
+        }
     }
 }
 
