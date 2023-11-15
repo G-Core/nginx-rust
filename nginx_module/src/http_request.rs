@@ -2,7 +2,10 @@
  * Copyright 2023 G-Core Innovations SARL
  */
 
-use std::{marker::PhantomData, ops::Deref};
+use std::{
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+};
 
 #[cfg(not(nginx_version_1023000))]
 use crate::{
@@ -61,6 +64,12 @@ impl<'a, Ctx> Deref for HttpRequestAndContext<'a, Ctx> {
 
     fn deref(&self) -> &Self::Target {
         unsafe { &*(&self.0 as *const ngx_http_request_t as *const HttpRequest) }
+    }
+}
+
+impl<'a, Ctx> DerefMut for HttpRequestAndContext<'a, Ctx> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(&mut self.0 as *mut ngx_http_request_t as *mut HttpRequest) }
     }
 }
 
@@ -312,6 +321,22 @@ impl<'a> HttpRequest<'a> {
                 } else {
                     None
                 }
+            }
+        }
+    }
+
+    pub fn set_indexed_var(&mut self, var: IndexedVar, value: NgxStr) {
+        unsafe {
+            let var_value = ngx_http_get_indexed_variable(
+                &self.0 as *const ngx_http_request_t as *mut ngx_http_request_t,
+                var.0 as usize,
+            );
+            if !var_value.is_null() {
+                let var_value = &mut *var_value;
+                var_value.set_not_found(0);
+                var_value.set_valid(1);
+                var_value.set_len(value.inner().len as u32);
+                var_value.data = value.inner().data;
             }
         }
     }
