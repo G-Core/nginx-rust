@@ -48,6 +48,19 @@ impl<'a, 'pool, Context: Default + 'a> Variables<'a, 'pool, Context> {
         Ok(Var)
     }
 
+    pub fn add_changeable<T: VarAccess<'a, Context> + 'a>(&mut self, name: NgxStr) -> anyhow::Result<Var> {
+        unsafe {
+            let var = ngx_http_add_variable(
+                self.config.ptr_mut_unsafe(),
+                name.as_mut_ptr_unsafe(),
+                (NGX_HTTP_VAR_NOHASH | NGX_HTTP_VAR_CHANGEABLE) as usize,
+            );
+            anyhow::ensure!(!var.is_null());
+            (*var).get_handler = Some(getter_fn::<Context, T>);
+        }
+        Ok(Var)
+    }
+
     pub fn add_mut<T: VarAccessMut<'a, Context> + 'a>(
         &mut self,
         name: NgxStr,
@@ -87,7 +100,6 @@ unsafe extern "C" fn getter_fn<'a, Context: Default + 'a, T: VarAccess<'a, Conte
         (*value).data = data.as_mut_ptr();
         (*value).set_len(data.len() as u32);
         (*value).set_not_found(0);
-        (*value).set_no_cacheable(1);
         (*value).set_valid(1);
     } else {
         (*value).set_not_found(1);
