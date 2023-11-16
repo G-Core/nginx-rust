@@ -19,6 +19,10 @@ pub struct NgxStr<'a> {
     lifetime: PhantomData<&'a ()>,
 }
 
+unsafe impl<'a> Send for NgxStr<'a> {}
+
+unsafe impl<'a> Sync for NgxStr<'a> {}
+
 impl<'a> Default for NgxStr<'a> {
     fn default() -> Self {
         Self::null()
