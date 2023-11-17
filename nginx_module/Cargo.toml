@@ -3,6 +3,13 @@ name = "nginx_module"
 version = "0.1.0"
 edition = "2021"
 build = "build.rs"
+authors = ["Gabriel Oprisan <gabriel.oprisan@gcore.com>"]
+description = "Rust bindings for building Nginx modules"
+homepage = "https://github.com/g-Core/nginx-rust"
+repository = "https://github.com/g-Core/nginx-rust"
+readme = "README.md"
+license = "Apache-2.0"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
