@@ -2,6 +2,12 @@
 name = "nginx_derive"
 version = "0.1.0"
 edition = "2021"
+authors = ["Gabriel Oprisan <gabriel.oprisan@gcore.com>"]
+description = "Helper crate for nginx-rust"
+homepage = "https://github.com/g-Core/nginx-rust"
+repository = "https://github.com/g-Core/nginx-rust"
+readme = "README.md"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
