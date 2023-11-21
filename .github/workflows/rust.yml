@@ -12,7 +12,7 @@ env:
 jobs:
   build:
 
-    runs-on: self-hosted-ubuntu-22-04-regular-x64
+    runs-on: ubuntu-latest
 
     container: rust:slim-bookworm
 
