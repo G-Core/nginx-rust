@@ -104,6 +104,16 @@ fn search_nginx_root_folder() -> String {
         }
     }
 
+    let target_dir = std::env::var("CARGO_TARGET_DIR");
+    if let Ok(target_dir) = target_dir.as_ref() {
+        for base in base_locations {
+            let folder = format!("{target_dir}/{base}");
+            if check_nginx_root(Path::new(&folder)) {
+                return folder;
+            }
+        }
+    }
+
     // If we are not a nginx submodule, try to find the folder side by side
     for base in base_locations {
         let base = format!("{manifest_dir}/{base}");
@@ -113,6 +123,20 @@ fn search_nginx_root_folder() -> String {
         {
             if entry.path().is_dir() && check_nginx_root(&entry.path()) {
                 return entry.path().to_str().unwrap().to_owned();
+            }
+        }
+    }
+
+    if let Ok(target_dir) = target_dir {
+        for base in base_locations {
+            let base = format!("{target_dir}/{base}");
+            for entry in std::fs::read_dir(base)
+                .expect("Cannot read directory")
+                .flatten()
+            {
+                if entry.path().is_dir() && check_nginx_root(&entry.path()) {
+                    return entry.path().to_str().unwrap().to_owned();
+                }
             }
         }
     }
