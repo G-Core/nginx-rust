@@ -85,6 +85,12 @@ fn search_nginx_root_folder() -> String {
         })
     }
 
+    if let Ok(nginx_dir) = std::env::var("NGINX_DIR") {
+        if check_nginx_root(Path::new(&nginx_dir)) {
+            return nginx_dir;
+        }
+    }
+
     let base_locations = [
         "..",
         "../..",
