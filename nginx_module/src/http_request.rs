@@ -340,4 +340,16 @@ impl<'a> HttpRequest<'a> {
             }
         }
     }
+
+    pub fn accept_encoding(&self) -> Option<NgxStr<'a>> {
+        let accept_enconding_entry = self.0.headers_in.accept_encoding;
+        if accept_enconding_entry.is_null() {
+            None
+        } else {
+            unsafe {
+                let accept_encoding = (*accept_enconding_entry).value;
+                Some(NgxStr::from_raw(accept_encoding))
+            }
+        }
+    }
 }
