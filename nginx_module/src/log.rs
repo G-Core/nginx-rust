@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 use std::ffi::{CStr, CString};
@@ -9,7 +9,7 @@ use crate::{
     NGX_LOG_ERR,
 };
 
-/// 
+///
 /// # Safety
 ///  
 ///  `log` should be a valid ngx_log_t pointer

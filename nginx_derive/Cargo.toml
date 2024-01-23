@@ -1,20 +1,24 @@
 [package]
-name = "nginx_derive"
-version = "0.1.1"
-edition = "2021"
-authors = ["Gabriel Oprisan <gabriel.oprisan@gcore.com>"]
-description = "Helper crate for nginx-rust"
-homepage = "https://github.com/g-Core/nginx-rust"
-repository = "https://github.com/g-Core/nginx-rust"
-readme = "README.md"
-license = "Apache-2.0"
+  authors     = [ "Gabriel Oprisan <gabriel.oprisan@gcore.com>" ]
+  description = "Helper crate for nginx-rust"
+  edition     = "2021"
+  homepage    = "https://github.com/g-Core/nginx-rust"
+  license     = "Apache-2.0"
+  name        = "nginx_derive"
+  readme      = "README.md"
+  repository  = "https://github.com/g-Core/nginx-rust"
+  version     = "0.1.1"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+  # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-proc-macro = true
+  proc-macro = true
 
 [dependencies]
-syn = "2.0.18"
-quote = "1.0.28"
-proc-macro2 = "1.0.59"
+  proc-macro2 = { version = "1.0.59" }
+  quote       = { version = "1.0.28" }
+  syn         = { version = "2.0.18" }
+
+[profile.release]
+  debug = true
+  lto = false

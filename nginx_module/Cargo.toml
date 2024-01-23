@@ -1,22 +1,23 @@
 [package]
-name = "nginx_module"
-version = "0.1.4"
-edition = "2021"
-build = "build.rs"
-authors = ["Gabriel Oprisan <gabriel.oprisan@gcore.com>"]
-description = "Rust bindings for building Nginx modules"
-homepage = "https://github.com/g-Core/nginx-rust"
-repository = "https://github.com/g-Core/nginx-rust"
-readme = "README.md"
-license = "Apache-2.0"
+  authors     = [ "Gabriel Oprisan <gabriel.oprisan@gcore.com>" ]
+  build       = "build.rs"
+  description = "Rust bindings for building Nginx modules"
+  edition     = "2021"
+  homepage    = "https://github.com/g-Core/nginx-rust"
+  license     = "Apache-2.0"
+  name        = "nginx_module"
+  readme      = "README.md"
+  repository  = "https://github.com/g-Core/nginx-rust"
+  version     = "0.1.4"
 
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+  # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-bindgen = "0.66.1"
+  bindgen = { version = "0.66.1" }
 
 [dependencies]
-anyhow = "1.0.71"
-bitflags = "2.3.1"
-libc = "0.2.144"
+  anyhow   = { version = "1.0.71" }
+  bitflags = { version = "2.3.1" }
+  libc     = { version = "0.2.144" }
+  url      = { version = "2.5" }

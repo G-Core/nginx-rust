@@ -1,15 +1,23 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 use std::marker::PhantomData;
 
 use crate::{
     bindings::{
-        ngx_http_add_variable, ngx_variable_value_t, NGX_HTTP_VAR_CHANGEABLE,
-        NGX_HTTP_VAR_NOCACHEABLE, NGX_HTTP_VAR_NOHASH,
+        ngx_http_add_variable,
+        ngx_variable_value_t,
+        NGX_HTTP_VAR_CHANGEABLE,
+        NGX_HTTP_VAR_NOCACHEABLE,
+        NGX_HTTP_VAR_NOHASH,
     },
-    ngx_http_request_t, HttpRequestAndContext, NgxConfig, NgxStr, NGX_ERROR, NGX_OK,
+    ngx_http_request_t,
+    HttpRequestAndContext,
+    NgxConfig,
+    NgxStr,
+    NGX_ERROR,
+    NGX_OK,
 };
 
 pub struct Variables<'a, 'pool, Context> {
@@ -48,7 +56,10 @@ impl<'a, 'pool, Context: Default + 'a> Variables<'a, 'pool, Context> {
         Ok(Var)
     }
 
-    pub fn add_changeable<T: VarAccess<'a, Context> + 'a>(&mut self, name: NgxStr) -> anyhow::Result<Var> {
+    pub fn add_changeable<T: VarAccess<'a, Context> + 'a>(
+        &mut self,
+        name: NgxStr,
+    ) -> anyhow::Result<Var> {
         unsafe {
             let var = ngx_http_add_variable(
                 self.config.ptr_mut_unsafe(),
