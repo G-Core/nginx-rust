@@ -1,16 +1,15 @@
 [package]
-name = "simple"
-version = "0.1.0"
-edition = "2021"
+  edition = "2021"
+  name    = "simple"
+  version = "0.1.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+  # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-crate-type = ["staticlib"]
-
+  crate-type = [ "staticlib" ]
 
 
 [dependencies]
-anyhow = "1.0.71"
-nginx_derive = { path = "../../nginx_derive" }
-nginx_module = { path = "../../nginx_module" }
+  anyhow       = "1.0.71"
+  nginx_derive = { path = "../../nginx_derive" }
+  nginx_module = { path = "../../nginx_module" }

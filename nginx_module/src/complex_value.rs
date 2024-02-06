@@ -1,18 +1,21 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 use std::{marker::PhantomData, mem::MaybeUninit};
 
+use super::{HttpRequest, NgxConfig, NgxStr};
 use crate::{
     bindings::{
-        ngx_http_compile_complex_value, ngx_http_compile_complex_value_t, ngx_http_complex_value,
-        ngx_http_complex_value_t, ngx_palloc, NGX_OK,
+        ngx_http_compile_complex_value,
+        ngx_http_compile_complex_value_t,
+        ngx_http_complex_value,
+        ngx_http_complex_value_t,
+        ngx_palloc,
+        NGX_OK,
     },
     ConfigValue,
 };
-
-use super::{HttpRequest, NgxConfig, NgxStr};
 
 #[derive(Copy, Clone)]
 pub struct ComplexValue<'a> {

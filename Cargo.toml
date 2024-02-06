@@ -1,9 +1,12 @@
 [workspace]
-resolver = "2"
+  resolver = "2"
 
-members = [
-    "examples/simple"
-]
+  members = [ "examples/simple" ]
 
 [profile.release]
-debug = true
+  debug = true
+  lto = false
+
+[profile.dev]
+  opt-level = 1
+  lto = false

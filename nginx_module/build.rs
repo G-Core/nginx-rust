@@ -1,12 +1,13 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
-use bindgen::callbacks::{IntKind, ParseCallbacks};
 use std::{
     env,
     path::{Path, PathBuf},
 };
+
+use bindgen::callbacks::{IntKind, ParseCallbacks};
 
 const INCLUDE_SUBDIRS: &[&str] = &[
     "objs/",

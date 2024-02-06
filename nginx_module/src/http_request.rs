@@ -1,28 +1,48 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+
 use std::{
+    collections::HashMap,
     marker::PhantomData,
     ops::{Deref, DerefMut},
 };
 
-#[cfg(not(nginx_version_1023000))]
-use crate::{
-    bindings::{ngx_array_push, ngx_array_t, NGX_DECLINED, NGX_OK},
-    wrappers::array_init,
-};
-use crate::{
-    bindings::{
-        ngx_http_get_indexed_variable, ngx_http_parse_multi_header_lines, ngx_http_request_t,
-        ngx_list_push, ngx_list_t, ngx_module_t, ngx_table_elt_t,
-    },
-    ngx_str_t,
-    wrappers::IndexedVar,
-};
-use crate::{connection::Connection, Log};
+use anyhow::Ok;
 
 use super::{NgxStr, Pool};
+use crate::{
+    bindings::{
+        ngx_alloc_chain_link,
+        ngx_buf_t,
+        ngx_chain_s,
+        ngx_http_get_indexed_variable,
+        ngx_http_headers_out_t,
+        ngx_http_output_filter,
+        ngx_http_parse_multi_header_lines,
+        ngx_http_request_s,
+        ngx_http_request_t,
+        ngx_http_send_header,
+        ngx_list_push,
+        ngx_list_t,
+        ngx_module_t,
+        ngx_pcalloc,
+        ngx_str_t,
+        ngx_table_elt_t,
+    },
+    connection::Connection,
+    wrappers::IndexedVar,
+    Log,
+    NGX_OK,
+};
+#[cfg(not(nginx_version_1023000))]
+use crate::{
+    bindings::{ngx_array_push, ngx_array_t, NGX_DECLINED, NGX_ERROR, NGX_OK},
+    wrappers::array_init,
+};
 
 pub struct HttpRequestAndContext<'a, Ctx>(ngx_http_request_t, PhantomData<&'a Ctx>);
 
@@ -57,6 +77,49 @@ impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
             Ok((req, ctx))
         }
     }
+
+    // get raw pointer to request structure
+    pub fn get_request_pointer(&mut self) -> *mut ngx_http_request_t {
+        &mut self.0 as *mut ngx_http_request_t
+    }
+
+    // send prepared headers
+    // headers should be prepared in headers_out structure
+    /// # Safety
+    /// you have to ensure that headers_out is properly initialized
+    /// no checks for that are performed
+    pub unsafe fn send_headers(&mut self) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            NGX_OK == ngx_http_send_header(self.get_request_pointer()) as u32,
+            "failed to send headers, ngx response"
+        );
+        Ok(())
+    }
+
+    // request allocation of chain_link structure from nginx's pool
+    // returns pointer to allocated structure
+    // return is guaranteed to be proper
+    pub fn alloc_chain_link(&mut self) -> *mut ngx_chain_s {
+        unsafe { ngx_alloc_chain_link(self.0.pool) }
+    }
+
+    // request allocation of chain_link structure from nginx's pool
+    // returns pointer to allocated structure
+    // return is guaranteed to be proper
+    pub fn alloc_buf(&mut self) -> *mut ngx_buf_t {
+        unsafe { ngx_pcalloc(self.0.pool, std::mem::size_of::<ngx_buf_t>()) as *mut ngx_buf_t }
+    }
+
+    // request sending the prepared body
+    // body have to be prepared in ngx_chain_s structure
+    // TODO:esvi builderf for it?
+    // TODO:esvi any returns
+    /// # Safety
+    /// you have to ensure that chain is properly initialized
+    /// no checks for that are performed
+    pub unsafe fn send_body(&mut self, chain: *mut ngx_chain_s) {
+        ngx_http_output_filter(&mut self.0 as *mut ngx_http_request_s, chain);
+    }
 }
 
 impl<'a, Ctx> Deref for HttpRequestAndContext<'a, Ctx> {
@@ -79,6 +142,15 @@ impl<'a> HttpRequest<'a> {
             let conf = (*(*self.0.main).loc_conf.add(module.ctx_index)) as *const Config;
             conf.as_ref()
         }
+    }
+
+    /// # Safety
+    /// access to that pointer could be safe
+    /// please ensure that you know what you are doing
+    /// check the nginx documentation for further details
+    pub unsafe fn get_main_config<'b, Config>(&self, module: &ngx_module_t) -> Option<&'b Config> {
+        let conf = (*(*self.0.main).main_conf.add(module.ctx_index)) as *const Config;
+        conf.as_ref()
     }
 
     pub fn is_main(&self) -> bool {
@@ -183,12 +255,43 @@ impl<'a> HttpRequest<'a> {
         }
     }
 
+    pub fn headers_out_ref(&mut self) -> &mut ngx_http_headers_out_t {
+        &mut self.0.headers_out
+    }
+
+    // TODO:esavier its not named uri but it returns only path
+    // TODO:consider either helper or change results to Strings
     pub fn unparsed_uri(&self) -> NgxStr {
         unsafe { NgxStr::from_raw(self.0.unparsed_uri) }
     }
 
     pub fn uri_args(&self) -> NgxStr {
         unsafe { NgxStr::from_raw(self.0.args) }
+    }
+
+    pub fn uri_extension(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.exten) }
+    }
+
+    pub fn uri_schema(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.schema) }
+    }
+
+    pub fn request_line(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.request_line) }
+    }
+
+    // constructs url::Url from request args
+    // schema and base are fake, and path is empty.
+    // used to get easy access to query params with validation
+    pub fn arg_map(&self) -> HashMap<String, String> {
+        let args = String::from_utf8_lossy(self.uri_args().as_bytes());
+        let url = url::Url::try_from(format!("data:text/plain?{}", args).as_str()).unwrap();
+        let mut map: HashMap<String, String> = HashMap::new();
+        for (key, value) in url.query_pairs() {
+            map.insert(key.to_string(), value.to_string());
+        }
+        map
     }
 
     pub fn server(&self) -> NgxStr {
@@ -279,6 +382,7 @@ impl<'a> HttpRequest<'a> {
                     cc = slice[0];
                 };
             }
+
             #[cfg(nginx_version_1023000)]
             {
                 cc = self.0.headers_out.cache_control;

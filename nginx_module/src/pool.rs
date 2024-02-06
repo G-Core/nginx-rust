@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 use std::{ffi::c_void, ptr::addr_of};

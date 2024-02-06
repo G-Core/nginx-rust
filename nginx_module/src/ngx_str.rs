@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 use std::{
@@ -7,9 +7,8 @@ use std::{
     ptr::{addr_of, addr_of_mut},
 };
 
-use crate::bindings::ngx_str_t;
-
 use super::Pool;
+use crate::bindings::ngx_str_t;
 
 /// NgxStr is an abstraction over ngx_str_t. It has the same memory layout as the underlying `inner` ngx_str_t (the `lifetime` field is zero sized).
 /// In addition to ngx_str_t NgxStr also tracks the lifetime of the underlying byte chunk, most times this is the lifetime of the pool it was allocated from.

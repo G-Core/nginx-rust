@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 G-Core Innovations SARL
+ * Copyright 2024 G-Core Innovations SARL
  */
 
 mod bindings;
@@ -10,15 +10,50 @@ use std::{
 };
 
 pub use bindings::{
-    nginx_version, ngx_chain_t, ngx_command_t, ngx_conf_t, ngx_cycle_t, ngx_http_conf_ctx_t,
-    ngx_http_module_t, ngx_http_request_body_filter_pt, ngx_http_request_t, ngx_module_t,
-    ngx_str_t, NGX_CONF_TAKE1, NGX_DECLINED, NGX_ERROR, NGX_HTTP_FORBIDDEN, NGX_HTTP_LOC_CONF,
-    NGX_HTTP_MAIN_CONF, NGX_HTTP_MODULE, NGX_HTTP_SRV_CONF, NGX_HTTP_TEMPORARY_REDIRECT,
-    NGX_LOG_ERR, NGX_OK, NGX_RS_HTTP_LOC_CONF_OFFSET, NGX_RS_MODULE_SIGNATURE,
+    nginx_version,
+    ngx_buf_t,
+    ngx_chain_t,
+    ngx_command_t,
+    ngx_conf_t,
+    ngx_cycle_t,
+    ngx_http_conf_ctx_t,
+    ngx_http_module_t,
+    ngx_http_request_body_filter_pt,
+    ngx_http_request_t,
+    ngx_module_t,
+    ngx_str_t,
+    NGX_CONF_TAKE1,
+    NGX_ERROR,
+    NGX_HTTP_LOC_CONF,
+    NGX_HTTP_MAIN_CONF,
+    NGX_HTTP_MODULE,
+    NGX_HTTP_SRV_CONF,
+    NGX_LOG_ERR,
+    NGX_OK,
+    NGX_RS_HTTP_LOC_CONF_OFFSET,
+    NGX_RS_MODULE_SIGNATURE,
 };
 use bindings::{
-    ngx_array_push, ngx_cycle, ngx_http_core_main_conf_t, ngx_http_core_module,
-    ngx_http_handler_pt, ngx_http_phases_NGX_HTTP_ACCESS_PHASE, ngx_http_top_request_body_filter,
+    ngx_array_push,
+    ngx_cycle,
+    ngx_http_core_main_conf_t,
+    ngx_http_core_module,
+    ngx_http_handler_pt,
+    ngx_http_phases_NGX_HTTP_ACCESS_PHASE,
+    ngx_http_top_request_body_filter,
+};
+// add common http return codes
+pub use bindings::{
+    NGX_DECLINED,
+    NGX_HTTP_ACCEPTED,
+    NGX_HTTP_BAD_REQUEST,
+    NGX_HTTP_FORBIDDEN,
+    NGX_HTTP_INTERNAL_SERVER_ERROR,
+    NGX_HTTP_NOT_ALLOWED,
+    NGX_HTTP_NOT_FOUND,
+    NGX_HTTP_NOT_IMPLEMENTED,
+    NGX_HTTP_OK,
+    NGX_HTTP_TEMPORARY_REDIRECT,
 };
 
 mod ngx_str;
