@@ -16,27 +16,18 @@ use anyhow::Ok;
 use super::{NgxStr, Pool};
 use crate::{
     bindings::{
-        ngx_alloc_chain_link,
-        ngx_buf_t,
-        ngx_chain_s,
-        ngx_http_get_indexed_variable,
-        ngx_http_headers_out_t,
-        ngx_http_output_filter,
-        ngx_http_parse_multi_header_lines,
-        ngx_http_request_s,
-        ngx_http_request_t,
-        ngx_http_send_header,
-        ngx_list_push,
-        ngx_list_t,
-        ngx_module_t,
-        ngx_pcalloc,
-        ngx_str_t,
-        ngx_table_elt_t,
+        ngx_alloc_chain_link, ngx_buf_t, ngx_chain_s, ngx_hash_find, ngx_hash_key,
+        ngx_http_core_main_conf_t, ngx_http_core_module, ngx_http_core_run_phases,
+        ngx_http_get_indexed_variable, ngx_http_headers_out_t, ngx_http_output_filter,
+        ngx_http_parse_multi_header_lines, ngx_http_request_t, ngx_http_send_header,
+        ngx_http_variable_t, ngx_list_push, ngx_list_t, ngx_module_t, ngx_pcalloc,
+        ngx_posted_events, ngx_table_elt_t,
     },
     connection::Connection,
+    ngx_post_event, ngx_str_t,
+    var::NginxVar,
     wrappers::IndexedVar,
-    Log,
-    NGX_OK,
+    Log, NGX_OK,
 };
 #[cfg(not(nginx_version_1023000))]
 use crate::{
@@ -118,7 +109,7 @@ impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
     /// you have to ensure that chain is properly initialized
     /// no checks for that are performed
     pub unsafe fn send_body(&mut self, chain: *mut ngx_chain_s) {
-        ngx_http_output_filter(&mut self.0 as *mut ngx_http_request_s, chain);
+        ngx_http_output_filter(&mut self.0 as *mut ngx_http_request_t, chain);
     }
 }
 
@@ -429,7 +420,7 @@ impl<'a> HttpRequest<'a> {
         }
     }
 
-    pub fn set_indexed_var(&mut self, var: IndexedVar, value: NgxStr) {
+    pub fn set_indexed_var(&self, var: IndexedVar, value: NgxStr) {
         unsafe {
             let var_value = ngx_http_get_indexed_variable(
                 &self.0 as *const ngx_http_request_t as *mut ngx_http_request_t,
@@ -455,5 +446,68 @@ impl<'a> HttpRequest<'a> {
                 Some(NgxStr::from_raw(accept_encoding))
             }
         }
+    }
+
+    pub fn id(&self) -> usize {
+        (&self.0 as *const ngx_http_request_t) as usize
+    }
+
+    pub fn from_id<'b>(id: usize) -> &'b mut Self {
+        let p = id as *mut ngx_http_request_t as *mut Self;
+        unsafe { p.as_mut().unwrap() }
+    }
+
+    pub fn from_raw<'b>(raw: *mut ngx_http_request_t) -> Option<&'b mut Self> {
+        let p = raw as *mut Self;
+        unsafe { p.as_mut() }
+    }
+
+    pub fn resume(&self) {
+        unsafe {
+            ngx_http_core_run_phases(
+                &self.0 as *const ngx_http_request_t as *mut ngx_http_request_t,
+            )
+        }
+    }
+
+    pub fn find_var(&self, var_name: &[u8]) -> Option<&NginxVar> {
+        unsafe {
+            let cmcf = ((*self.0.main_conf).add(ngx_http_core_module.ctx_index))
+                as *mut ngx_http_core_main_conf_t;
+
+            let hash_bot = ngx_hash_key(var_name.as_ptr().cast_mut(), var_name.len());
+            let var: *mut ngx_http_variable_t = ngx_hash_find(
+                &mut (*cmcf).variables_hash,
+                hash_bot,
+                var_name.as_ptr().cast_mut(),
+                var_name.len(),
+            )
+            .cast();
+
+            if var.is_null() {
+                for i in 0..(*cmcf).variables.nelts {
+                    let var = ((*cmcf).variables.elts as *mut ngx_http_variable_t).add(i);
+                    if var_name == std::slice::from_raw_parts((*var).name.data, (*var).name.len) {
+                        return NginxVar::new(var);
+                    }
+                }
+            }
+
+            NginxVar::new(var)
+        }
+    }
+
+    pub fn set_filter_need_buffering(&self) {
+        unsafe { (*self.0.request_body).set_filter_need_buffering(1) };
+    }
+
+    pub fn post_read_event(&self) {
+        unsafe {
+            ngx_post_event((*self.0.connection).read, &mut ngx_posted_events);
+        }
+    }
+
+    pub fn inner(&self) -> *mut ngx_http_request_t {
+        (&self.0 as *const ngx_http_request_t).cast_mut()
     }
 }

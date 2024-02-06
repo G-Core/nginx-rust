@@ -36,8 +36,9 @@ impl<'a> ConfigValue<'a> for ComplexValue<'a> {
     fn config_directive(
         &mut self,
         conf: &'a mut NgxConfig,
-        value: NgxStr<'a>,
+        values: &[NgxStr<'a>],
     ) -> anyhow::Result<()> {
+        let value = values[0];
         if value.is_empty() {
             self.inner = std::ptr::null_mut();
         } else {
