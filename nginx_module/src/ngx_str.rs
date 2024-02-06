@@ -3,6 +3,7 @@
  */
 
 use std::{
+    hash::Hash,
     marker::PhantomData,
     ptr::{addr_of, addr_of_mut},
 };
@@ -22,6 +23,20 @@ unsafe impl<'a> Send for NgxStr<'a> {}
 
 unsafe impl<'a> Sync for NgxStr<'a> {}
 
+impl<'a> PartialEq for NgxStr<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_bytes() == other.as_bytes()
+    }
+}
+
+impl<'a> Eq for NgxStr<'a> {}
+
+impl<'a> Hash for NgxStr<'a> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.as_bytes().hash(state);
+    }
+}
+
 impl<'a> Default for NgxStr<'a> {
     fn default() -> Self {
         Self::null()
@@ -37,12 +52,6 @@ impl<'a> From<&'a [u8]> for NgxStr<'a> {
 impl<'a, const N: usize> From<&'a [u8; N]> for NgxStr<'a> {
     fn from(value: &'a [u8; N]) -> Self {
         Self::new_from_array(value)
-    }
-}
-
-impl<'a, 'b> PartialEq<NgxStr<'b>> for NgxStr<'a> {
-    fn eq(&self, other: &NgxStr<'b>) -> bool {
-        self.as_bytes() == other.as_bytes()
     }
 }
 
@@ -80,7 +89,7 @@ impl<'a> NgxStr<'a> {
     }
 
     //TODO: remove once const trait implementation gets stabilized
-    pub const fn new(value: &'a [u8]) -> Self {
+    pub const fn new(value: &'a [u8]) -> NgxStr<'a> {
         Self {
             inner: ngx_str_t {
                 len: value.len(),
@@ -118,6 +127,12 @@ impl<'a> NgxStr<'a> {
             },
             lifetime: PhantomData,
         }
+    }
+
+    pub fn with_pool(pool: &'a Pool, buf: &[u8]) -> anyhow::Result<Self> {
+        let data = pool.alloc_bytes(buf.len())?;
+        data.copy_from_slice(buf);
+        Ok(NgxStr::new(data))
     }
 
     /// This method encapsulates the pattern where a string is allocated from a pool, but the string parts are iterated one time to

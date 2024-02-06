@@ -2,22 +2,16 @@
  * Copyright 2024 G-Core Innovations SARL
  */
 
-use std::marker::PhantomData;
+use std::{marker::PhantomData, mem::MaybeUninit};
 
 use crate::{
     bindings::{
-        ngx_http_add_variable,
-        ngx_variable_value_t,
-        NGX_HTTP_VAR_CHANGEABLE,
-        NGX_HTTP_VAR_NOCACHEABLE,
+        ngx_http_add_variable, ngx_http_variable_t, ngx_http_variable_value_t,
+        ngx_variable_value_t, NGX_HTTP_VAR_CHANGEABLE, NGX_HTTP_VAR_NOCACHEABLE,
         NGX_HTTP_VAR_NOHASH,
     },
-    ngx_http_request_t,
-    HttpRequestAndContext,
-    NgxConfig,
-    NgxStr,
-    NGX_ERROR,
-    NGX_OK,
+    ngx_http_request_t, ngx_str_t, HttpRequest, HttpRequestAndContext, IndexedVar, NgxConfig,
+    NgxStr, NGX_ERROR, NGX_OK,
 };
 
 pub struct Variables<'a, 'pool, Context> {
@@ -26,6 +20,52 @@ pub struct Variables<'a, 'pool, Context> {
 }
 
 pub struct Var;
+
+pub struct NginxVar(ngx_http_variable_t);
+
+impl NginxVar {
+    pub(crate) unsafe fn new<'a>(raw: *mut ngx_http_variable_t) -> Option<&'a Self> {
+        if raw.is_null() {
+            None
+        } else {
+            Some(&*raw.cast())
+        }
+    }
+
+    pub fn get(&self, req: &HttpRequest) -> NgxStr {
+        unsafe {
+            if let Some(g) = self.0.get_handler {
+                let mut value: ngx_http_variable_value_t = MaybeUninit::zeroed().assume_init();
+                g(req.ptr_mut(), &mut value, self.0.data);
+                if value.valid() != 0 && value.not_found() == 0 {
+                    NgxStr::from_raw(ngx_str_t {
+                        len: value.len() as usize,
+                        data: value.data,
+                    })
+                } else {
+                    NgxStr::default()
+                }
+            } else {
+                NgxStr::default()
+            }
+        }
+    }
+
+    pub fn set(&self, req: &HttpRequest, value: NgxStr) {
+        unsafe {
+            if let Some(s) = self.0.set_handler {
+                let mut var_value: ngx_http_variable_value_t = MaybeUninit::zeroed().assume_init();
+                var_value.set_valid(1);
+                var_value.set_not_found(0);
+                var_value.set_len(value.as_bytes().len() as u32);
+                var_value.data = value.as_bytes().as_ptr().cast_mut();
+                s(req.ptr_mut(), &mut var_value, self.0.data);
+            } else if let Ok(value) = NgxStr::with_pool(req.pool(), value.as_bytes()) {
+                req.set_indexed_var(IndexedVar(self.0.index as isize), value);
+            }
+        }
+    }
+}
 
 pub trait VarAccess<'req, Context> {
     fn get(req: &mut HttpRequestAndContext<'req, Context>) -> Option<NgxStr<'req>>;

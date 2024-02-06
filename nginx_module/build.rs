@@ -63,7 +63,7 @@ fn main() {
         .allowlist_type("ngx_.*")
         .allowlist_function("ngx_.*")
         .allowlist_var("NGX_.*|ngx_.*|nginx_.*")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .parse_callbacks(Box::new(NginxVersionCallback))
         .clang_args(clang_args)
         .generate()
