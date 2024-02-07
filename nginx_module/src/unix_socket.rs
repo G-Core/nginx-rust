@@ -127,6 +127,10 @@ impl UnixSocket {
 
         Self(inner)
     }
+
+    pub fn disconnected(&self) -> bool {
+        matches!(&*self.0.state.borrow_mut(), State::Disconnected { .. })
+    }
 }
 
 impl State {
