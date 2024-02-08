@@ -11,7 +11,7 @@ use std::{
 };
 
 pub use bindings::{
-    nginx_version, ngx_chain_add_copy, ngx_chain_t, ngx_command_t, ngx_conf_t, ngx_cycle_t,
+    nginx_version, ngx_chain_add_copy, ngx_chain_t, ngx_command_t, ngx_conf_t, ngx_cycle_t, ngx_buf_t,
     ngx_http_conf_ctx_t, ngx_http_module_t, ngx_http_request_body_filter_pt, ngx_http_request_t,
     ngx_module_t, ngx_str_t, NGX_AGAIN, NGX_CONF_TAKE1, NGX_CONF_TAKE2, NGX_DECLINED, NGX_ERROR,
     NGX_HTTP_FORBIDDEN, NGX_HTTP_LOC_CONF, NGX_HTTP_MAIN_CONF, NGX_HTTP_MODULE, NGX_HTTP_SRV_CONF,
