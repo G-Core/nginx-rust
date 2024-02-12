@@ -35,7 +35,7 @@ struct Inner {
     state: RefCell<State>,
     on_read: Box<RefCell<ReadFn>>,
     check_handshake: Box<RefCell<ValidateFn>>,
-    after_handshake: Box<RefCell<dyn FnMut()>>,
+    after_handshake: Box<RefCell<dyn FnMut() -> Vec<u8> + 'static>>,
     handshake_msg: Vec<u8>,
     path: String,
     name: Cow<'static, [u8]>,
@@ -66,7 +66,7 @@ impl UnixSocket {
         read_event: impl FnMut(&[u8]) -> Vec<u8> + 'static,
         handshake_msg: Vec<u8>,
         check_server_handshake: impl FnMut(&[u8]) -> anyhow::Result<()> + 'static,
-        after_handshake: impl FnMut() + 'static,
+        after_handshake: impl FnMut() -> Vec<u8> + 'static,
     ) -> Self {
         let mut dummy_log: Box<ngx_log_t> =
             Box::new(unsafe { MaybeUninit::zeroed().assume_init() });
@@ -122,7 +122,7 @@ impl UnixSocket {
             },
             State::Disconnected { event } => {
                 event.data = (&*inner as *const Inner as *mut Inner).cast();
-                (inner.after_handshake.borrow_mut())();
+                (inner.after_handshake.borrow_mut())(); // discard send data, it is disconnected
             }
         }
 
@@ -474,7 +474,12 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
                         }
                     } // state not borrowed here any more
                     if handshake_done {
-                        ((*data).after_handshake.borrow_mut())();
+                        let back_data = ((*data).after_handshake.borrow_mut())();
+                        if !back_data.is_empty() && (*data).write(&back_data).is_err() {
+                            *(*data).state.borrow_mut() = State::Disconnected {
+                                event: (*data).create_and_schedule_reconnect(),
+                            };
+                        }
                     }
                     if is_connected {
                         let back_data = ((*data).on_read.borrow_mut())(&buf[..result as usize]);
