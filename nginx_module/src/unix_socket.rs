@@ -9,7 +9,7 @@ use crate::{
     bindings::{
         ngx_close_connection, ngx_connection_t, ngx_cycle, ngx_event_actions,
         ngx_event_connect_peer, ngx_event_t, ngx_exiting, ngx_handle_read_event,
-        ngx_handle_write_event, ngx_log_t, ngx_peer_connection_t, ngx_quit, ngx_quit_wait,
+        ngx_handle_write_event, ngx_log_t, ngx_peer_connection_t, ngx_quit,
         ngx_terminate, NGX_AGAIN, NGX_RS_WRITE_EVENT,
     },
     ngx_event_add_timer, ngx_event_del_timer, NgxStr, NGX_OK,
@@ -541,7 +541,6 @@ unsafe extern "C" fn on_reconnect_timeout(ev: *mut ngx_event_t) {
                         ev.log = (*ngx_cycle).log;
                         if (*ev).timer_set() == 0
                             && ngx_quit == 0
-                            && ngx_quit_wait == 0
                             && ngx_exiting == 0
                             && ngx_terminate == 0
                         {
@@ -552,7 +551,6 @@ unsafe extern "C" fn on_reconnect_timeout(ev: *mut ngx_event_t) {
                 };
             } else if (*ev).timer_set() == 0
                 && ngx_quit == 0
-                && ngx_quit_wait == 0
                 && ngx_exiting == 0
                 && ngx_terminate == 0
             {
