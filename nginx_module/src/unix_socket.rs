@@ -9,8 +9,8 @@ use crate::{
     bindings::{
         ngx_close_connection, ngx_connection_t, ngx_cycle, ngx_event_actions,
         ngx_event_connect_peer, ngx_event_t, ngx_exiting, ngx_handle_read_event,
-        ngx_handle_write_event, ngx_log_t, ngx_peer_connection_t, ngx_quit,
-        ngx_terminate, NGX_AGAIN, NGX_RS_WRITE_EVENT,
+        ngx_handle_write_event, ngx_log_t, ngx_peer_connection_t, ngx_quit, ngx_terminate,
+        NGX_AGAIN, NGX_RS_WRITE_EVENT,
     },
     ngx_event_add_timer, ngx_event_del_timer, NgxStr, NGX_OK,
 };
@@ -131,6 +131,16 @@ impl UnixSocket {
 
     pub fn disconnected(&self) -> bool {
         matches!(&*self.0.state.borrow_mut(), State::Disconnected { .. })
+    }
+
+    pub fn stop(&self) {
+        unsafe {
+            // create a dummy event, but don't schedule it
+            let mut dummy_ev: Box<ngx_event_t> = Box::new(MaybeUninit::zeroed().assume_init());
+            dummy_ev.handler = None;
+            dummy_ev.log = (*ngx_cycle).log;
+            *self.0.state.borrow_mut() = State::Disconnected { event: dummy_ev }
+        }
     }
 }
 
