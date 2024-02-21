@@ -11,18 +11,17 @@ use std::{
 };
 
 pub use bindings::{
-    nginx_version, ngx_chain_add_copy, ngx_chain_t, ngx_command_t, ngx_conf_t, ngx_cycle_t, ngx_buf_t,
-    ngx_http_conf_ctx_t, ngx_http_module_t, ngx_http_request_body_filter_pt, ngx_http_request_t,
-    ngx_module_t, ngx_str_t, NGX_AGAIN, NGX_CONF_TAKE1, NGX_CONF_TAKE2, NGX_DECLINED, NGX_ERROR,
-    NGX_HTTP_FORBIDDEN, NGX_HTTP_LOC_CONF, NGX_HTTP_MAIN_CONF, NGX_HTTP_MODULE, NGX_HTTP_SRV_CONF,
-    NGX_HTTP_TEMPORARY_REDIRECT, NGX_LOG_ERR, NGX_OK, NGX_RS_HTTP_LOC_CONF_OFFSET,
-    NGX_RS_MODULE_SIGNATURE, ngx_current_msec
+    nginx_version, ngx_buf_t, ngx_chain_add_copy, ngx_chain_t, ngx_command_t, ngx_conf_t,
+    ngx_current_msec, ngx_cycle_t, ngx_http_conf_ctx_t, ngx_http_module_t,
+    ngx_http_request_body_filter_pt, ngx_http_request_t, ngx_module_t, ngx_str_t, NGX_AGAIN,
+    NGX_CONF_TAKE1, NGX_CONF_TAKE2, NGX_DECLINED, NGX_ERROR, NGX_HTTP_FORBIDDEN, NGX_HTTP_LOC_CONF,
+    NGX_HTTP_MAIN_CONF, NGX_HTTP_MODULE, NGX_HTTP_SRV_CONF, NGX_HTTP_TEMPORARY_REDIRECT,
+    NGX_LOG_ERR, NGX_OK, NGX_RS_HTTP_LOC_CONF_OFFSET, NGX_RS_MODULE_SIGNATURE,
 };
 use bindings::{
-    ngx_array_push, ngx_cycle, ngx_event_t, ngx_event_timer_rbtree,
-    ngx_http_core_main_conf_t, ngx_http_core_module, ngx_http_handler_pt,
-    ngx_http_phases_NGX_HTTP_ACCESS_PHASE, ngx_http_top_request_body_filter, ngx_queue_t,
-    ngx_rbtree_delete, ngx_rbtree_insert,
+    ngx_array_push, ngx_cycle, ngx_event_t, ngx_event_timer_rbtree, ngx_http_core_main_conf_t,
+    ngx_http_core_module, ngx_http_handler_pt, ngx_http_phases_NGX_HTTP_ACCESS_PHASE,
+    ngx_http_top_request_body_filter, ngx_queue_t, ngx_rbtree_delete, ngx_rbtree_insert,
 };
 
 mod ngx_str;
@@ -55,6 +54,9 @@ pub use wrappers::{hex_dump, IndexedVar, NgxConfig};
 
 mod unix_socket;
 pub use unix_socket::{Disconnected, UnixSocket};
+
+mod timer;
+pub use timer::Timer;
 
 pub trait Config {
     fn commands() -> &'static mut [ngx_command_t];
