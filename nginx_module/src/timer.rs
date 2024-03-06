@@ -20,7 +20,9 @@ impl<HandlerFn> Drop for Timer<HandlerFn> {
         }
 
         unsafe {
-            ngx_event_del_timer(&mut *self.event.as_mut());
+            if self.event.timer_set() != 0 {
+                ngx_event_del_timer(&mut *self.event.as_mut());
+            }
         }
     }
 }
