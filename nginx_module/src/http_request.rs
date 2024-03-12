@@ -18,10 +18,10 @@ use crate::{
     bindings::{
         ngx_alloc_chain_link, ngx_buf_t, ngx_chain_s, ngx_hash_find, ngx_hash_key,
         ngx_http_core_main_conf_t, ngx_http_core_module, ngx_http_core_run_phases,
-        ngx_http_get_indexed_variable, ngx_http_headers_out_t, ngx_http_output_filter,
-        ngx_http_parse_multi_header_lines, ngx_http_request_t, ngx_http_send_header,
-        ngx_http_variable_t, ngx_list_push, ngx_list_t, ngx_module_t, ngx_pcalloc,
-        ngx_posted_events, ngx_table_elt_t,
+        ngx_http_get_indexed_variable, ngx_http_headers_in_t, ngx_http_headers_out_t,
+        ngx_http_output_filter, ngx_http_parse_multi_header_lines, ngx_http_request_t,
+        ngx_http_send_header, ngx_http_variable_t, ngx_list_part_t, ngx_list_push, ngx_list_t,
+        ngx_module_t, ngx_pcalloc, ngx_posted_events, ngx_table_elt_t,
     },
     connection::Connection,
     ngx_post_event, ngx_str_t,
@@ -38,6 +38,13 @@ use crate::{
 pub struct HttpRequestAndContext<'a, Ctx>(ngx_http_request_t, PhantomData<&'a Ctx>);
 
 pub struct HttpRequest<'a>(ngx_http_request_t, PhantomData<&'a ()>);
+
+pub struct HeadersIn<'a>(ngx_http_headers_in_t, PhantomData<&'a ()>);
+pub struct HeadersInIter<'a> {
+    part: *const ngx_list_part_t,
+    elt_idx: usize,
+    _phantom: PhantomData<&'a ()>,
+}
 
 impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
     ///
@@ -248,6 +255,10 @@ impl<'a> HttpRequest<'a> {
 
     pub fn headers_out_ref(&mut self) -> &mut ngx_http_headers_out_t {
         &mut self.0.headers_out
+    }
+
+    pub fn headers_in(&self) -> &HeadersIn<'a> {
+        unsafe { &*(&self.0.headers_in as *const ngx_http_headers_in_t as *const HeadersIn) }
     }
 
     // TODO:esavier its not named uri but it returns only path
@@ -509,5 +520,46 @@ impl<'a> HttpRequest<'a> {
 
     pub fn inner(&self) -> *mut ngx_http_request_t {
         (&self.0 as *const ngx_http_request_t).cast_mut()
+    }
+}
+
+impl<'a> HeadersIn<'a> {
+    pub fn iter(&self) -> HeadersInIter<'a> {
+        HeadersInIter {
+            part: &self.0.headers.part,
+            elt_idx: 0,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a> Iterator for HeadersInIter<'a> {
+    type Item = (NgxStr<'a>, NgxStr<'a>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.part.is_null() {
+            None
+        } else {
+            unsafe {
+                let len = (*self.part).nelts;
+                if self.elt_idx >= len {
+                    return None;
+                }
+                let elem_base = (*self.part).elts as *const ngx_table_elt_t;
+                let elem = elem_base.add(self.elt_idx);
+                let result = (
+                    NgxStr::from_raw((*elem).key),
+                    NgxStr::from_raw((*elem).value),
+                );
+
+                self.elt_idx += 1;
+                if self.elt_idx >= len {
+                    self.elt_idx = 0;
+                    self.part = (*self.part).next;
+                }
+
+                Some(result)
+            }
+        }
     }
 }
