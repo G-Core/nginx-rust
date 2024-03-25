@@ -21,6 +21,11 @@ pub use bindings::{
 use bindings::{
     ngx_array_push, ngx_cycle, ngx_event_t, ngx_event_timer_rbtree, ngx_http_core_main_conf_t,
     ngx_http_core_module, ngx_http_handler_pt, ngx_http_phases_NGX_HTTP_ACCESS_PHASE,
+    ngx_http_phases_NGX_HTTP_CONTENT_PHASE, ngx_http_phases_NGX_HTTP_FIND_CONFIG_PHASE,
+    ngx_http_phases_NGX_HTTP_LOG_PHASE, ngx_http_phases_NGX_HTTP_POST_ACCESS_PHASE,
+    ngx_http_phases_NGX_HTTP_POST_READ_PHASE, ngx_http_phases_NGX_HTTP_POST_REWRITE_PHASE,
+    ngx_http_phases_NGX_HTTP_PREACCESS_PHASE, ngx_http_phases_NGX_HTTP_PRECONTENT_PHASE,
+    ngx_http_phases_NGX_HTTP_REWRITE_PHASE, ngx_http_phases_NGX_HTTP_SERVER_REWRITE_PHASE,
     ngx_http_top_request_body_filter, ngx_queue_t, ngx_rbtree_delete, ngx_rbtree_insert,
 };
 
@@ -286,6 +291,21 @@ pub trait HttpRequestBodyHandler<'a>: Sized {
     ) -> anyhow::Result<isize>;
 }
 
+#[repr(usize)]
+pub enum NginxPhase {
+    PostRead = ngx_http_phases_NGX_HTTP_POST_READ_PHASE as usize,
+    ServerRewrite = ngx_http_phases_NGX_HTTP_SERVER_REWRITE_PHASE as usize,
+    FindConfig = ngx_http_phases_NGX_HTTP_FIND_CONFIG_PHASE as usize,
+    Rewrite = ngx_http_phases_NGX_HTTP_REWRITE_PHASE as usize,
+    PostRewrite = ngx_http_phases_NGX_HTTP_POST_REWRITE_PHASE as usize,
+    PreAccess = ngx_http_phases_NGX_HTTP_PREACCESS_PHASE as usize,
+    Access = ngx_http_phases_NGX_HTTP_ACCESS_PHASE as usize,
+    PostAccess = ngx_http_phases_NGX_HTTP_POST_ACCESS_PHASE as usize,
+    PreContent = ngx_http_phases_NGX_HTTP_PRECONTENT_PHASE as usize,
+    Content = ngx_http_phases_NGX_HTTP_CONTENT_PHASE as usize,
+    Log = ngx_http_phases_NGX_HTTP_LOG_PHASE as usize,
+}
+
 ///
 /// # Safety
 ///  
@@ -330,6 +350,29 @@ unsafe extern "C" fn ngx_http_generic_handler<'a, H: HttpHandler<'a> + Default +
             }
             NGX_ERROR as isize
         }
+    }
+}
+
+///
+/// # Safety
+///  
+///  `conf` should be a valid ngx_conf_t pointer
+///
+pub unsafe fn add_http_phase_handler<'a, H: HttpHandler<'a> + Default + 'a>(
+    conf: *mut ngx_conf_t,
+    phase: NginxPhase,
+) -> isize {
+    let cmcf = (*(*((*conf).ctx as *mut ngx_http_conf_ctx_t))
+        .main_conf
+        .add(ngx_http_core_module.ctx_index)) as *mut ngx_http_core_main_conf_t;
+
+    let h =
+        ngx_array_push(&mut (*cmcf).phases[phase as usize].handlers) as *mut ngx_http_handler_pt;
+    if h.is_null() {
+        NGX_ERROR as isize
+    } else {
+        *h = Some(ngx_http_generic_handler::<H>);
+        NGX_OK as isize
     }
 }
 
