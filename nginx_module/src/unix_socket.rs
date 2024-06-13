@@ -71,6 +71,28 @@ impl UnixSocket {
         let mut dummy_log: Box<ngx_log_t> =
             Box::new(unsafe { MaybeUninit::zeroed().assume_init() });
         dummy_log.writer = Some(dummy_log_fn);
+        if unsafe { ngx_quit != 0 || ngx_exiting != 0 || ngx_terminate != 0 } {
+            let state = unsafe {
+                let mut ev: Box<ngx_event_t> = Box::new(MaybeUninit::zeroed().assume_init());
+                ev.handler = Some(on_reconnect_timeout);
+                ev.log = (*ngx_cycle).log;
+
+                State::Disconnected { event: ev }
+            };
+            let inner = Inner {
+                state: RefCell::new(state),
+                on_read: Box::new(RefCell::new(read_event)),
+                check_handshake: Box::new(RefCell::new(check_server_handshake)),
+                after_handshake: Box::new(RefCell::new(after_handshake)),
+                handshake_msg,
+                path,
+                name,
+                dummy_log,
+                _phantom: PhantomPinned,
+            };
+            return Self(Box::pin(inner));
+        }
+
         let state = match State::try_connect(&path, &name, &mut *dummy_log) {
             Some(conn) => {
                 let mut buffers = WriteBuffers::default();
