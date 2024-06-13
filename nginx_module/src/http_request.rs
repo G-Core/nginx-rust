@@ -40,11 +40,16 @@ pub struct HttpRequestAndContext<'a, Ctx>(ngx_http_request_t, PhantomData<&'a Ct
 pub struct HttpRequest<'a>(ngx_http_request_t, PhantomData<&'a ()>);
 
 pub struct HeadersIn<'a>(ngx_http_headers_in_t, PhantomData<&'a ()>);
-pub struct HeadersInIter<'a> {
+pub struct HeadersOut<'a>(ngx_http_headers_out_t, PhantomData<&'a ()>);
+
+pub struct HeaderList<'a>(ngx_list_t, PhantomData<&'a ()>);
+
+pub struct HeadersIter<'a> {
     part: *const ngx_list_part_t,
     elt_idx: usize,
     _phantom: PhantomData<&'a ()>,
 }
+
 
 impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
     ///
@@ -259,6 +264,18 @@ impl<'a> HttpRequest<'a> {
 
     pub fn headers_in(&self) -> &HeadersIn<'a> {
         unsafe { &*(&self.0.headers_in as *const ngx_http_headers_in_t as *const HeadersIn) }
+    }
+
+    pub fn headers_in_mut(&mut self) -> &mut HeadersIn<'a> {
+        unsafe { &mut *(&mut self.0.headers_in as *mut ngx_http_headers_in_t as *mut HeadersIn) }
+    }
+
+    pub fn headers_out(&self) -> &HeadersOut<'a> {
+        unsafe { &*(&self.0.headers_out as *const ngx_http_headers_out_t as *const HeadersOut) }
+    }
+
+    pub fn headers_out_mut(&mut self) -> &mut HeadersOut<'a> {
+        unsafe { &mut *(&mut self.0.headers_out as *mut ngx_http_headers_out_t as *mut HeadersOut) }
     }
 
     // TODO:esavier its not named uri but it returns only path
@@ -523,17 +540,82 @@ impl<'a> HttpRequest<'a> {
     }
 }
 
-impl<'a> HeadersIn<'a> {
-    pub fn iter(&self) -> HeadersInIter<'a> {
-        HeadersInIter {
+impl<'a> HeaderList<'a> {
+    pub fn iter(&self) -> HeadersIter<'a> {
+        HeadersIter {
+            part: &self.0.part,
+            elt_idx: 0,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn set(&mut self, name: NgxStr<'a>, value: NgxStr<'a>) {
+        let mut part_opt = Some(&mut self.0.part);
+        while let Some(part) = part_opt {
+            let elems = unsafe { std::slice::from_raw_parts_mut(part.elts as *mut ngx_table_elt_t, part.nelts) };
+            for elem in elems {
+                if unsafe { NgxStr::from_raw(elem.key) } == name {
+                    elem.value = value.inner();
+                }
+            }
+            part_opt = unsafe { part.next.as_mut() };
+        }
+    }
+
+
+    pub fn add(&mut self, name: NgxStr<'a>, value: NgxStr<'a>) -> anyhow::Result<()> {
+        let h = unsafe { (ngx_list_push(&mut self.0) as *mut ngx_table_elt_t).as_mut().ok_or_else(|| anyhow::anyhow!("Cannot push to header list"))? };
+        h.hash = 1;
+        h.key = name.inner();
+        h.value = value.inner();
+        Ok(())   
+    }
+
+    pub fn remove(&mut self, name: NgxStr<'a>) {
+        self.set(name, NgxStr::null())
+    }
+}
+
+impl<'a> Deref for HeadersIn<'a> {
+    type Target = HeaderList<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(&self.0.headers as *const ngx_list_t as *const HeaderList<'a>) }
+    }
+}
+
+impl<'a> DerefMut for HeadersIn<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(&mut self.0.headers as *mut ngx_list_t as *mut HeaderList<'a>) }
+    }
+}
+
+impl<'a> Deref for HeadersOut<'a> {
+    type Target = HeaderList<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*(&self.0.headers as *const ngx_list_t as *const HeaderList<'a>) }
+    }
+}
+
+impl<'a> DerefMut for HeadersOut<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *(&mut self.0.headers as *mut ngx_list_t as *mut HeaderList<'a>) }
+    }
+}
+
+impl<'a> HeadersOut<'a> {
+    pub fn iter(&self) -> HeadersIter<'a> {
+        HeadersIter {
             part: &self.0.headers.part,
             elt_idx: 0,
             _phantom: PhantomData,
         }
     }
+
 }
 
-impl<'a> Iterator for HeadersInIter<'a> {
+impl<'a> Iterator for HeadersIter<'a> {
     type Item = (NgxStr<'a>, NgxStr<'a>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -563,3 +645,5 @@ impl<'a> Iterator for HeadersInIter<'a> {
         }
     }
 }
+
+
