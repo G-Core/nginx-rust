@@ -2,7 +2,7 @@ use std::{
     borrow::Cow, cell::RefCell, collections::VecDeque, marker::PhantomPinned, mem::MaybeUninit,
     os::unix::ffi::OsStrExt, path::Path, pin::Pin,
 };
-
+use std::cell::Cell;
 use libc::{c_void, sockaddr_un};
 
 use crate::{
@@ -40,6 +40,7 @@ struct Inner {
     path: String,
     name: Cow<'static, [u8]>,
     dummy_log: Box<ngx_log_t>,
+    reconnect_timeout: Cell<usize>,
     _phantom: PhantomPinned,
 }
 
@@ -57,7 +58,7 @@ struct WriteBuffer {
     end: u32,
 }
 
-const TIMEOUT_MS: usize = 500;
+const TIMEOUT_MS: usize = 255;
 
 impl UnixSocket {
     pub fn connect(
@@ -105,6 +106,7 @@ impl UnixSocket {
             path,
             name,
             dummy_log,
+            reconnect_timeout: Cell::new(0),
             _phantom: PhantomPinned,
         };
 
@@ -290,7 +292,13 @@ impl Inner {
         ev.log = (*ngx_cycle).log;
         ev.data = (self as *const Self as *mut Self).cast();
 
-        ngx_event_add_timer(&mut *ev, TIMEOUT_MS);
+        let reconnect_timeout = self.reconnect_timeout.get();
+
+        ngx_event_add_timer(&mut *ev, reconnect_timeout);
+
+        if reconnect_timeout < TIMEOUT_MS {
+            self.reconnect_timeout.set((reconnect_timeout + 1) * 2);
+        }
 
         ev
     }
@@ -467,7 +475,8 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
                                         *state = State::Connected {
                                             conn: new_conn,
                                             buffers: std::mem::take(buffers),
-                                        }
+                                        };
+                                        (*data).reconnect_timeout.set(0);
                                     }
                                     Err(_) => {
                                         *state = State::Disconnected {
