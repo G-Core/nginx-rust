@@ -258,6 +258,10 @@ impl<'a> HttpRequest<'a> {
         }
     }
 
+    pub fn set_path(&mut self, data: NgxStr<'a>)  {
+        self.0.unparsed_uri = data.inner();
+    }
+
     pub fn headers_out_ref(&mut self) -> &mut ngx_http_headers_out_t {
         &mut self.0.headers_out
     }
