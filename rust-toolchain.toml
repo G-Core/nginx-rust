@@ -1,5 +1,5 @@
 [toolchain]
-  channel    = "1.73"
+  channel    = "1.82"
   components = [ "rustc-dev", "rustfmt" ]
   profile    = "minimal"
   targets    = [ "x86_64-unknown-linux-gnu" ]
