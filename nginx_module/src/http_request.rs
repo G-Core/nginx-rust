@@ -572,6 +572,8 @@ impl<'a> HeaderList<'a> {
         h.hash = 1;
         h.key = name.inner();
         h.value = value.inner();
+        h.lowcase_key = name.inner().data;
+        h.next = std::ptr::null_mut();
         Ok(())   
     }
 
