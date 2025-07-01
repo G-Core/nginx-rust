@@ -83,7 +83,13 @@ impl UnixSocket {
                             Box::new(MaybeUninit::zeroed().assume_init());
                         ev.handler = Some(on_reconnect_timeout);
                         ev.log = (*ngx_cycle).log;
-                        ngx_event_add_timer(&mut *ev, MIN_TIMEOUT_MS);
+                        if (*ev).timer_set() == 0
+                            && ngx_quit == 0
+                            && ngx_exiting == 0
+                            && ngx_terminate == 0
+                        {
+                            ngx_event_add_timer(&mut *ev, MIN_TIMEOUT_MS);
+                        }
                         State::Disconnected { event: ev, reconnect_timeout: MIN_TIMEOUT_MS }
                     },
                 }
@@ -92,7 +98,13 @@ impl UnixSocket {
                 let mut ev: Box<ngx_event_t> = Box::new(MaybeUninit::zeroed().assume_init());
                 ev.handler = Some(on_reconnect_timeout);
                 ev.log = (*ngx_cycle).log;
-                ngx_event_add_timer(&mut *ev, MIN_TIMEOUT_MS);
+                if (*ev).timer_set() == 0
+                    && ngx_quit == 0
+                    && ngx_exiting == 0
+                    && ngx_terminate == 0
+                {
+                    ngx_event_add_timer(&mut *ev, MIN_TIMEOUT_MS);
+                }
                 State::Disconnected { event: ev, reconnect_timeout: MIN_TIMEOUT_MS }
             },
         };
@@ -292,7 +304,13 @@ impl Inner {
         ev.log = (*ngx_cycle).log;
         ev.data = (self as *const Self as *mut Self).cast();
 
-        ngx_event_add_timer(&mut *ev, 0);
+        if (*ev).timer_set() == 0
+            && ngx_quit == 0
+            && ngx_exiting == 0
+            && ngx_terminate == 0
+        {
+            ngx_event_add_timer(&mut *ev, 0);
+        }
 
         ev
     }
@@ -323,7 +341,12 @@ impl WriteBuffers {
                         return Err(Disconnected);
                     }
                     BufferSendResult::Again => {
-                        ngx_event_add_timer((*conn).write, TIMEOUT_MS);
+                        if ngx_quit == 0
+                            && ngx_exiting == 0
+                            && ngx_terminate == 0
+                        {
+                            ngx_event_add_timer((*conn).write, TIMEOUT_MS);
+                        }
                         if ngx_handle_write_event((*conn).write, 0) != NGX_OK as isize {
                             return Err(Disconnected);
                         }

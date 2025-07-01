@@ -300,6 +300,10 @@ impl<'a> HttpRequest<'a> {
         unsafe { NgxStr::from_raw(self.0.schema) }
     }
 
+    pub fn uri_method(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.method_name) }
+    }
+
     pub fn request_line(&self) -> NgxStr {
         unsafe { NgxStr::from_raw(self.0.request_line) }
     }
