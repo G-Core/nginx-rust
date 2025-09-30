@@ -286,9 +286,16 @@ impl Inner {
 
     // Unsafe - self should come from a Pinned address
     unsafe fn send(&self) {
-        let state = &mut *self.state.borrow_mut();
-        if let State::Connected { conn, buffers } = state {
-            if let Err(Disconnected) = unsafe { buffers.send(*conn) } {
+        // Use try_borrow_mut to avoid panic on re-entrant calls
+        let mut state = match self.state.try_borrow_mut() {
+            Ok(state) => state,
+            Err(_) => {
+                return
+            }, // Already borrowed, skip this send attempt
+        };
+
+        if let State::Connected { conn, buffers } = &mut *state {
+            if let Err(Disconnected) = buffers.send(*conn) {
                 *state = State::Disconnected {
                     event: self.create_and_schedule_reconnect(),
                     reconnect_timeout: MIN_TIMEOUT_MS
@@ -309,7 +316,7 @@ impl Inner {
             && ngx_exiting == 0
             && ngx_terminate == 0
         {
-            ngx_event_add_timer(&mut *ev, 0);
+            ngx_event_add_timer(&mut *ev, MIN_TIMEOUT_MS);
         }
 
         ev
@@ -341,7 +348,8 @@ impl WriteBuffers {
                         return Err(Disconnected);
                     }
                     BufferSendResult::Again => {
-                        if ngx_quit == 0
+                        if (*(*conn).write).timer_set() == 0
+                            && ngx_quit == 0
                             && ngx_exiting == 0
                             && ngx_terminate == 0
                         {
@@ -557,50 +565,80 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
 }
 
 unsafe extern "C" fn on_reconnect_timeout(ev: *mut ngx_event_t) {
+    // Add null pointer checks
+    if ev.is_null() {
+        return;
+    }
+
     let data = (*ev).data as *const Inner;
-    if !data.is_null() {
-        let data = &*data;
-        let mut state = data.state.borrow_mut();
-        if let State::Disconnected {  reconnect_timeout, .. } = &mut *state {
-            if *reconnect_timeout < TIMEOUT_MS {
-                *reconnect_timeout = (*reconnect_timeout)  * 2
-            };
-            if let Some(conn) = State::try_connect(
-                &data.path,
-                &data.name,
-                &*data.dummy_log as *const ngx_log_t as *mut ngx_log_t,
-            ) {
-                (*conn).data = (*ev).data;
-                (*(*conn).write).handler = Some(on_write);
-                (*(*conn).read).handler = Some(on_read);
+    if data.is_null() {
+        return;
+    }
 
-                let mut buffers = WriteBuffers::default();
-                buffers.push(&data.handshake_msg);
-                *state = match unsafe { buffers.send(conn) } {
-                    Ok(()) => State::WaitServerHandshake { conn, buffers },
-                    Err(_) => unsafe {
-                        let mut ev: Box<ngx_event_t> =
-                            Box::new(MaybeUninit::zeroed().assume_init());
-                        ev.handler = Some(on_reconnect_timeout);
-                        ev.log = (*ngx_cycle).log;
-                        if (*ev).timer_set() == 0
-                            && ngx_quit == 0
-                            && ngx_exiting == 0
-                            && ngx_terminate == 0
-                        {
-                            ngx_event_add_timer(&mut *ev, *reconnect_timeout);
-                        }
+    let data = &*data;
 
-                        State::Disconnected { event: ev, reconnect_timeout: *reconnect_timeout }
-                    },
-                };
-            } else if (*ev).timer_set() == 0
+    // Use try_borrow_mut to avoid panic if already borrowed
+    let mut state = match data.state.try_borrow_mut() {
+        Ok(state) => state,
+        Err(_) => {
+            // State is already borrowed, schedule retry
+            if (*ev).timer_set() == 0
                 && ngx_quit == 0
                 && ngx_exiting == 0
                 && ngx_terminate == 0
             {
-                ngx_event_add_timer(ev, *reconnect_timeout);
+                ngx_event_add_timer(ev, MIN_TIMEOUT_MS);
             }
+            return;
+        }
+    };
+
+    if let State::Disconnected { reconnect_timeout, .. } = &mut *state {
+        if *reconnect_timeout < TIMEOUT_MS {
+            *reconnect_timeout = (*reconnect_timeout) * 2;
+        }
+
+        if let Some(conn) = State::try_connect(
+            &data.path,
+            &data.name,
+            &*data.dummy_log as *const ngx_log_t as *mut ngx_log_t,
+        ) {
+            (*conn).data = (*ev).data;
+            (*(*conn).write).handler = Some(on_write);
+            (*(*conn).read).handler = Some(on_read);
+
+            let mut buffers = WriteBuffers::default();
+            buffers.push(&data.handshake_msg);
+            *state = match buffers.send(conn) {
+                Ok(()) => State::WaitServerHandshake { conn, buffers },
+                Err(_) => {
+                    let mut new_ev: Box<ngx_event_t> =
+                        Box::new(MaybeUninit::zeroed().assume_init());
+                    new_ev.handler = Some(on_reconnect_timeout);
+                    new_ev.log = (*ngx_cycle).log;
+                    new_ev.data = (*ev).data;
+
+                    if (*new_ev).timer_set() == 0
+                        && ngx_quit == 0
+                        && ngx_exiting == 0
+                        && ngx_terminate == 0
+                    {
+                        ngx_event_add_timer(&mut *new_ev, *reconnect_timeout);
+                    }
+
+                    State::Disconnected {
+                        event: new_ev,
+                        reconnect_timeout: *reconnect_timeout
+                    }
+                },
+            };
+        } else if (*ev).timer_set() == 0
+            && ngx_quit == 0
+            && ngx_exiting == 0
+            && ngx_terminate == 0
+        {
+            (*ev).handler = Some(on_reconnect_timeout);
+            ngx_event_add_timer(ev, *reconnect_timeout);
         }
     }
 }
