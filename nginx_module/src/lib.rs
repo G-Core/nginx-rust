@@ -1,6 +1,8 @@
 /*
  * Copyright 2024 G-Core Innovations SARL
  */
+#![allow(unsafe_op_in_unsafe_fn)]
+#![allow(static_mut_refs)]
 
 mod bindings;
 use std::{

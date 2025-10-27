@@ -267,7 +267,7 @@ impl Inner {
         match &mut *self.state.borrow_mut() {
             State::Connected {
                 conn,
-                ref mut buffers,
+                buffers,
             } => {
                 buffers.push(buf);
                 unsafe {
@@ -278,7 +278,7 @@ impl Inner {
             }
             State::WaitServerHandshake {
                 conn,
-                ref mut buffers,
+                buffers,
             } => {
                 buffers.push(buf);
                 unsafe {
