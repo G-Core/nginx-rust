@@ -1,5 +1,5 @@
 [package]
-  edition = "2021"
+  edition = "2024"
   name    = "simple"
   version = "0.1.0"
 
@@ -10,6 +10,6 @@
 
 
 [dependencies]
-  anyhow       = "1.0.71"
+  anyhow       = "1.0"
   nginx_derive = { path = "../../nginx_derive" }
   nginx_module = { path = "../../nginx_module" }

@@ -2,7 +2,7 @@
   authors     = [ "Gabriel Oprisan <gabriel.oprisan@gcore.com>" ]
   build       = "build.rs"
   description = "Rust bindings for building Nginx modules"
-  edition     = "2021"
+  edition     = "2024"
   homepage    = "https://github.com/g-Core/nginx-rust"
   license     = "Apache-2.0"
   name        = "nginx_module"
@@ -14,11 +14,11 @@
   # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-bindgen = "0.69.4"
+bindgen = "0.72"
 
 [dependencies]
-anyhow = "1.0.71"
-bitflags = "2.3.1"
-libc = "0.2.144"
-strum = { version = "0.26.1", features = ["derive"] }
-url = "2.5.0"
+anyhow = "1.0"
+bitflags = "2.10"
+libc = "0.2"
+strum = { version = "0.27", features = ["derive"] }
+url = "2.5.7"
