@@ -143,6 +143,8 @@ unsafe extern "C" fn getter_fn<'a, Context: Default + 'a, T: VarAccess<'a, Conte
     };
     if let Some(v) = T::get(req) {
         let Some(pool) = req.pool() else {
+            req.log()
+                .error("Request pool is null when getting variable value".to_string());
             return NGX_ERROR as isize;
         };
         let Ok(data) = pool.alloc_bytes(v.inner().len) else {

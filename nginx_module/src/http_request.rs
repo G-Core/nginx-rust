@@ -50,7 +50,6 @@ pub struct HeadersIter<'a> {
     _phantom: PhantomData<&'a ()>,
 }
 
-
 impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
     ///
     /// # Safety
@@ -69,7 +68,11 @@ impl<'a, Ctx: Default> HttpRequestAndContext<'a, Ctx> {
             let req = &mut *(&mut self.0 as *mut ngx_http_request_t as *mut HttpRequest);
             let ptr = self.0.ctx.add(module.ctx_index);
             let ctx = if (*ptr).is_null() {
-                let pool = Pool::from_raw(self.0.pool);
+                let Some(pool) = Pool::from_raw(self.0.pool) else {
+                    return Err(anyhow::anyhow!(
+                        "Request pool is null when splitting request"
+                    ));
+                };
                 let ctx = pool.alloc()?;
 
                 *ptr = (ctx as *mut Ctx).cast();
@@ -164,8 +167,8 @@ impl<'a> HttpRequest<'a> {
         self.0.internal() != 0
     }
 
-    pub fn pool(&self) -> Option<&'a mut Pool> {
-        unsafe { Pool::from_raw(self.0.pool) }
+    pub fn pool(&self) -> Option<&'a Pool> {
+        unsafe { Pool::from_raw(self.0.pool).map(|p| &*p) }
     }
 
     pub(crate) unsafe fn ptr_mut(&self) -> *mut ngx_http_request_t {
@@ -258,7 +261,7 @@ impl<'a> HttpRequest<'a> {
         }
     }
 
-    pub fn set_path(&mut self, data: NgxStr<'a>)  {
+    pub fn set_path(&mut self, data: NgxStr<'a>) {
         self.0.unparsed_uri = data.inner();
     }
 
@@ -560,7 +563,9 @@ impl<'a> HeaderList<'a> {
     pub fn set(&mut self, name: NgxStr<'a>, value: NgxStr<'a>) {
         let mut part_opt = Some(&mut self.0.part);
         while let Some(part) = part_opt {
-            let elems = unsafe { std::slice::from_raw_parts_mut(part.elts as *mut ngx_table_elt_t, part.nelts) };
+            let elems = unsafe {
+                std::slice::from_raw_parts_mut(part.elts as *mut ngx_table_elt_t, part.nelts)
+            };
             for elem in elems {
                 if unsafe { NgxStr::from_raw(elem.key) } == name {
                     elem.value = value.inner();
@@ -570,15 +575,18 @@ impl<'a> HeaderList<'a> {
         }
     }
 
-
     pub fn add(&mut self, name: NgxStr<'a>, value: NgxStr<'a>) -> anyhow::Result<()> {
-        let h = unsafe { (ngx_list_push(&mut self.0) as *mut ngx_table_elt_t).as_mut().ok_or_else(|| anyhow::anyhow!("Cannot push to header list"))? };
+        let h = unsafe {
+            (ngx_list_push(&mut self.0) as *mut ngx_table_elt_t)
+                .as_mut()
+                .ok_or_else(|| anyhow::anyhow!("Cannot push to header list"))?
+        };
         h.hash = 1;
         h.key = name.inner();
         h.value = value.inner();
         h.lowcase_key = name.inner().data;
         h.next = std::ptr::null_mut();
-        Ok(())   
+        Ok(())
     }
 
     pub fn remove(&mut self, name: NgxStr<'a>) {
@@ -622,7 +630,6 @@ impl<'a> HeadersOut<'a> {
             _phantom: PhantomData,
         }
     }
-
 }
 
 impl<'a> Iterator for HeadersIter<'a> {
@@ -655,5 +662,3 @@ impl<'a> Iterator for HeadersIter<'a> {
         }
     }
 }
-
-

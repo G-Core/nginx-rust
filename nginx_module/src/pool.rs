@@ -12,8 +12,7 @@ impl Pool {
     ///
     /// # Safety
     ///  
-    /// `ptr` should be a valid ngx_pool_t pointer
-    ///  Also unsafe as it can assign an arbitrary lifetime.
+    ///  `ptr` should be a valid ngx_pool_t pointer
     ///
     pub unsafe fn from_raw<'a>(ptr: *mut ngx_pool_t) -> Option<&'a mut Self> {
         (ptr as *mut Self).as_mut()
