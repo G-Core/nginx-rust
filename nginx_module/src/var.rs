@@ -60,8 +60,10 @@ impl NginxVar {
                 var_value.set_len(value.as_bytes().len() as u32);
                 var_value.data = value.as_bytes().as_ptr().cast_mut();
                 s(req.ptr_mut(), &mut var_value, self.0.data);
-            } else if let Ok(value) = NgxStr::with_pool(req.pool(), value.as_bytes()) {
-                req.set_indexed_var(IndexedVar(self.0.index as isize), value);
+            } else if let Some(pool) = req.pool() {
+                if let Ok(value) = NgxStr::with_pool(pool, value.as_bytes()) {
+                    req.set_indexed_var(IndexedVar(self.0.index as isize), value);
+                }
             }
         }
     }
@@ -140,7 +142,10 @@ unsafe extern "C" fn getter_fn<'a, Context: Default + 'a, T: VarAccess<'a, Conte
         return NGX_OK as isize;
     };
     if let Some(v) = T::get(req) {
-        let Ok(data) = req.pool().alloc_bytes(v.inner().len) else {
+        let Some(pool) = req.pool() else {
+            return NGX_ERROR as isize;
+        };
+        let Ok(data) = pool.alloc_bytes(v.inner().len) else {
             req.log().error(format!(
                 "Allocation failed for variable data, {} bytes",
                 v.inner().len

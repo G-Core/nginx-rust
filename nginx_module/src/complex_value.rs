@@ -49,7 +49,7 @@ impl<'a> ConfigValue<'a> for ComplexValue<'a> {
                 compiler.value = value.as_mut_ptr_unsafe();
 
                 let complex_value: *mut ngx_http_complex_value_t = ngx_palloc(
-                    conf.pool().inner(),
+                    conf.pool().ok_or_else(|| anyhow::anyhow!("null pool"))?.inner(),
                     std::mem::size_of::<ngx_http_complex_value_t>(),
                 )
                 .cast();

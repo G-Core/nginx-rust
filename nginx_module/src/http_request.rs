@@ -164,7 +164,7 @@ impl<'a> HttpRequest<'a> {
         self.0.internal() != 0
     }
 
-    pub fn pool(&self) -> &'a Pool {
+    pub fn pool(&self) -> Option<&'a mut Pool> {
         unsafe { Pool::from_raw(self.0.pool) }
     }
 

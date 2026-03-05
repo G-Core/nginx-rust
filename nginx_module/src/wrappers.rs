@@ -66,7 +66,7 @@ impl<'pool> NgxConfig<'pool> {
         (&self.inner as *const ngx_conf_t).cast_mut()
     }
 
-    pub fn pool(&mut self) -> &mut Pool {
+    pub fn pool(&mut self) -> Option<&mut Pool> {
         unsafe { Pool::from_raw(self.inner.pool) }
     }
 
