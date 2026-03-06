@@ -168,7 +168,7 @@ impl<'a> HttpRequest<'a> {
     }
 
     pub fn pool(&self) -> Option<&'a Pool> {
-        unsafe { Pool::from_raw(self.0.pool).map(|p| &*p) }
+        unsafe { Pool::from_raw_ref(self.0.pool) }
     }
 
     pub(crate) unsafe fn ptr_mut(&self) -> *mut ngx_http_request_t {

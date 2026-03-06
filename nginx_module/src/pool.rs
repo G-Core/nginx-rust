@@ -10,12 +10,48 @@ pub struct Pool(ngx_pool_t);
 
 impl Pool {
     ///
+    /// Constructs a mutable reference to `Self` from a raw pointer to `ngx_pool_t`.
+    ///
     /// # Safety
-    ///  
-    ///  `ptr` should be a valid ngx_pool_t pointer
+    /// This function is `unsafe` because it performs a raw pointer cast and dereference,
+    /// which can lead to undefined behavior if the pointer is invalid, null, or not aligned correctly
+    /// for the type `Self`.
+    ///
+    /// # Parameters
+    /// - `ptr`: A raw mutable pointer to `ngx_pool_t` that is expected to point to memory
+    ///          compatible with type `Self`.
+    ///
+    /// # Returns
+    /// - `Option<&'a mut Self>`:
+    ///   - Returns `Some(&'a mut Self)` if `ptr` is not null and valid to dereference.
+    ///   - Returns `None` if `ptr` is null.
     ///
     pub unsafe fn from_raw<'a>(ptr: *mut ngx_pool_t) -> Option<&'a mut Self> {
         (ptr as *mut Self).as_mut()
+    }
+
+    ///
+    /// Converts a raw mutable pointer of type `*mut ngx_pool_t` into an immutable reference of type `&Self`.
+    ///
+    /// # Safety
+    ///
+    /// This function is `unsafe` because it operates on a raw pointer and assumes that:
+    /// - The pointer points to a valid instance of the type `Self`.
+    /// - The lifetime `'a` must accurately represent the validity period of the referenced data.
+    ///
+    /// Failing to uphold these invariants could lead to undefined behavior.
+    ///
+    /// # Parameters
+    ///
+    /// - `ptr`: A raw mutable pointer of type `*mut ngx_pool_t` that will be cast to a pointer of type `*mut Self`.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&'a Self)`: If the pointer is not null, the function returns a reference to `Self`.
+    /// - `None`: If the pointer is null, the function returns `None`.
+    ///
+    pub unsafe fn from_raw_ref<'a>(ptr: *mut ngx_pool_t) -> Option<&'a Self> {
+        (ptr as *mut Self).as_ref()
     }
 
     pub fn alloc<T: Default>(&self) -> anyhow::Result<&mut T> {
