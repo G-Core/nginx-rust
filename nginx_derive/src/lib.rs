@@ -93,7 +93,11 @@ fn impl_derive_config(input: DeriveInput) -> proc_macro2::TokenStream {
                     pub const COMMANDS_COUNT: usize = #field_count;
 
                     pub unsafe extern "C" fn create(conf: *mut ::nginx_module::ngx_conf_t) -> *mut std::ffi::c_void {
-                        let pool = ::nginx_module::Pool::from_raw((*conf).pool);
+                        let Some(pool) = ::nginx_module::Pool::from_raw((*conf).pool) else {
+                            let log = ::nginx_module::Log::new((*conf).log);
+                            log.error("Null pool on create config".to_string());
+                            return std::ptr::null_mut()
+                        };
                         let config = pool.alloc::<#struct_name>();
                         match config {
                             Err(e) => {

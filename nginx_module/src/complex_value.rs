@@ -7,12 +7,8 @@ use std::{marker::PhantomData, mem::MaybeUninit};
 use super::{HttpRequest, NgxConfig, NgxStr};
 use crate::{
     bindings::{
-        ngx_http_compile_complex_value,
-        ngx_http_compile_complex_value_t,
-        ngx_http_complex_value,
-        ngx_http_complex_value_t,
-        ngx_palloc,
-        NGX_OK,
+        ngx_http_compile_complex_value, ngx_http_compile_complex_value_t, ngx_http_complex_value,
+        ngx_http_complex_value_t, ngx_palloc, NGX_OK,
     },
     ConfigValue,
 };
@@ -49,7 +45,13 @@ impl<'a> ConfigValue<'a> for ComplexValue<'a> {
                 compiler.value = value.as_mut_ptr_unsafe();
 
                 let complex_value: *mut ngx_http_complex_value_t = ngx_palloc(
-                    conf.pool().inner(),
+                    conf.pool()
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "ngx_conf_t.pool is null while compiling ngx_http_complex_value"
+                            )
+                        })?
+                        .inner(),
                     std::mem::size_of::<ngx_http_complex_value_t>(),
                 )
                 .cast();
