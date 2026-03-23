@@ -273,7 +273,7 @@ impl Drop for State {
                 }
             },
             Self::Disconnected { event, .. } => unsafe {
-                if event.active() != 0 {
+                if event.timer_set() != 0 {
                     ngx_event_del_timer(event.as_mut());
                 }
             },
@@ -601,6 +601,7 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
                                     );
                                 }
                             }
+                            break;
                         }
                     }
                     if is_connected {
@@ -624,6 +625,7 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
                                     log_borrow_mut_error("on_read: state borrow (on_read)", error);
                                 }
                             }
+                            break;
                         }
                     }
                 } else if result == 0 {
