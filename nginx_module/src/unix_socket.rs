@@ -273,7 +273,7 @@ impl Drop for State {
                 }
             },
             Self::Disconnected { event, .. } => unsafe {
-                if event.active() != 0 {
+                if event.timer_set() != 0 {
                     ngx_event_del_timer(event.as_mut());
                 }
             },
