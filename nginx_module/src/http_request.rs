@@ -31,7 +31,7 @@ use crate::{
 };
 #[cfg(not(nginx_version_1023000))]
 use crate::{
-    bindings::{ngx_array_push, ngx_array_t, NGX_DECLINED, NGX_ERROR, NGX_OK},
+    bindings::{ngx_array_push, ngx_array_t, NGX_DECLINED, NGX_DONE, NGX_ERROR, NGX_OK},
     wrappers::array_init,
 };
 
@@ -548,6 +548,69 @@ impl<'a> HttpRequest<'a> {
 
     pub fn inner(&self) -> *mut ngx_http_request_t {
         (&self.0 as *const ngx_http_request_t).cast_mut()
+    }
+
+    /// Send a local response with status, headers, and body.
+    /// Headers are provided as an iterator of `(key, value)` byte pairs.
+    /// After this call, the phase handler must return `NGX_DONE` (-4).
+    ///
+    /// # Safety
+    /// Caller must ensure the request is still valid and no response has been sent yet.
+    pub unsafe fn send_local_response<K, V>(
+        &mut self,
+        status: usize,
+        headers: impl Iterator<Item = (K, V)>,
+        body: &[u8],
+    ) -> anyhow::Result<()>
+    where
+        K: AsRef<[u8]>,
+        V: AsRef<[u8]>,
+    {
+        let pool = self.pool().ok_or_else(|| anyhow::anyhow!("pool is null"))?;
+
+        for (key, value) in headers {
+            let ngx_key = NgxStr::with_pool(pool, key.as_ref())?;
+            let ngx_value = NgxStr::with_pool(pool, value.as_ref())?;
+            let h = (ngx_list_push(&mut self.0.headers_out.headers) as *mut ngx_table_elt_t)
+                .as_mut()
+                .ok_or_else(|| anyhow::anyhow!("cannot push to headers_out list"))?;
+            h.hash = 1;
+            h.key = ngx_key.inner();
+            h.value = ngx_value.inner();
+            h.lowcase_key = ngx_key.inner().data;
+            h.next = std::ptr::null_mut();
+        }
+
+        self.0.headers_out.status = status;
+        self.0.headers_out.content_length_n = body.len() as i64;
+
+        anyhow::ensure!(
+            NGX_OK == ngx_http_send_header(self.ptr_mut()) as u32,
+            "ngx_http_send_header failed"
+        );
+
+        if !body.is_empty() {
+            let buf =
+                ngx_pcalloc(self.0.pool, std::mem::size_of::<ngx_buf_t>()) as *mut ngx_buf_t;
+            anyhow::ensure!(!buf.is_null(), "failed to allocate response buffer");
+            let data = ngx_pcalloc(self.0.pool, body.len()) as *mut u8;
+            anyhow::ensure!(!data.is_null(), "failed to allocate response body");
+            std::ptr::copy_nonoverlapping(body.as_ptr(), data, body.len());
+            (*buf).pos = data;
+            (*buf).last = data.add(body.len());
+            (*buf).set_memory(1);
+            (*buf).set_last_buf(1);
+            (*buf).set_last_in_chain(1);
+
+            let chain = ngx_alloc_chain_link(self.0.pool);
+            anyhow::ensure!(!chain.is_null(), "failed to allocate chain link");
+            (*chain).buf = buf;
+            (*chain).next = std::ptr::null_mut();
+
+            ngx_http_output_filter(self.ptr_mut(), chain);
+        }
+
+        Ok(())
     }
 }
 
