@@ -561,7 +561,7 @@ impl<'a> HttpRequest<'a> {
         status: usize,
         headers: impl Iterator<Item = (K, V)>,
         body: &[u8],
-    ) -> anyhow::Result<()>
+    ) -> anyhow::Result<isize>
     where
         K: AsRef<[u8]>,
         V: AsRef<[u8]>,
@@ -589,29 +589,25 @@ impl<'a> HttpRequest<'a> {
             "ngx_http_send_header failed"
         );
 
+        let buf = ngx_pcalloc(self.0.pool, std::mem::size_of::<ngx_buf_t>()) as *mut ngx_buf_t;
+        anyhow::ensure!(!buf.is_null(), "failed to allocate response buffer");
         if !body.is_empty() {
-            let buf =
-                ngx_pcalloc(self.0.pool, std::mem::size_of::<ngx_buf_t>()) as *mut ngx_buf_t;
-            anyhow::ensure!(!buf.is_null(), "failed to allocate response buffer");
             let data = ngx_pcalloc(self.0.pool, body.len()) as *mut u8;
             anyhow::ensure!(!data.is_null(), "failed to allocate response body");
             std::ptr::copy_nonoverlapping(body.as_ptr(), data, body.len());
             (*buf).pos = data;
             (*buf).last = data.add(body.len());
             (*buf).set_memory(1);
-            (*buf).set_last_buf(1);
-            (*buf).set_last_in_chain(1);
-
-            let chain = ngx_alloc_chain_link(self.0.pool);
-            anyhow::ensure!(!chain.is_null(), "failed to allocate chain link");
-            (*chain).buf = buf;
-            (*chain).next = std::ptr::null_mut();
-
-            let rc = ngx_http_output_filter(self.ptr_mut(), chain);
-            anyhow::ensure!(NGX_OK == rc as u32, "ngx_http_output_filter failed: {rc}");
         }
+        (*buf).set_last_buf(1);
+        (*buf).set_last_in_chain(1);
+        let chain = ngx_alloc_chain_link(self.0.pool);
+        anyhow::ensure!(!chain.is_null(), "failed to allocate chain link");
+        (*chain).buf = buf;
+        (*chain).next = std::ptr::null_mut();
+        let rc =ngx_http_output_filter(self.ptr_mut(), chain);
 
-        Ok(())
+        Ok(rc)
     }
 }
 
