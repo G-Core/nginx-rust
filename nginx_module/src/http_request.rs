@@ -607,7 +607,8 @@ impl<'a> HttpRequest<'a> {
             (*chain).buf = buf;
             (*chain).next = std::ptr::null_mut();
 
-            ngx_http_output_filter(self.ptr_mut(), chain);
+            let rc = ngx_http_output_filter(self.ptr_mut(), chain);
+            anyhow::ensure!(NGX_OK == rc as u32, "ngx_http_output_filter failed: {rc}");
         }
 
         Ok(())
