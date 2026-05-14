@@ -433,7 +433,7 @@ enum BufferSendResult {
 
 impl WriteBuffer {
     fn new() -> Self {
-        let data = vec![0; 4096];
+        let data = vec![0; 16384];
         Self {
             data: data.into_boxed_slice(),
             start: 0,
@@ -522,7 +522,7 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
     let data = conn_data(conn);
     if !data.is_null() {
         if let Some(recv) = conn.recv {
-            let mut buf = [0; 1024];
+            let mut buf = [0; 16384];
             loop {
                 let result = recv(conn, buf.as_mut_ptr(), buf.len());
                 if result > 0 {
