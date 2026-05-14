@@ -627,7 +627,7 @@ impl<'a> HeaderList<'a> {
                 std::slice::from_raw_parts_mut(part.elts as *mut ngx_table_elt_t, part.nelts)
             };
             for elem in elems {
-                if unsafe { NgxStr::from_raw(elem.key) } == name {
+                if unsafe { NgxStr::from_raw(elem.key) }.eq_ignore_ascii_case(&name) {
                     elem.value = value.inner();
                 }
             }
