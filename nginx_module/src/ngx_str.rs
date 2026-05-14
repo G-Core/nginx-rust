@@ -183,6 +183,10 @@ impl<'a> NgxStr<'a> {
     pub const fn is_empty(self) -> bool {
         self.inner.len == 0
     }
+
+    pub fn eq_ignore_ascii_case(self, other: &NgxStr<'_>) -> bool {
+        self.as_bytes().eq_ignore_ascii_case(other.as_bytes())
+    }
 }
 
 impl<'a> Builder<'a> {
