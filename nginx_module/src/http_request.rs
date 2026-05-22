@@ -261,12 +261,35 @@ impl<'a> HttpRequest<'a> {
         }
     }
 
-    pub fn set_path(&mut self, data: NgxStr<'a>) {
-        self.0.unparsed_uri = data.inner();
-    }
+    /// Atomically update the request URL: path, query string and unparsed_uri.
+    /// All three nginx fields (`uri`, `args`, `unparsed_uri`) are updated and
+    /// `valid_unparsed_uri` flag is cleared so nginx will rebuild it if needed.
+    ///
+    /// `path` should be just the path (e.g. `/foo/bar`).
+    /// `query` should be the query string without leading `?` (empty for no query).
+    pub fn set_url(&mut self, path: &[u8], query: &[u8]) -> anyhow::Result<()> {
+        let pool = self
+            .pool()
+            .ok_or_else(|| anyhow::anyhow!("request pool is null"))?;
 
-    pub fn set_query(&mut self, data: NgxStr<'a>) {
-        self.0.args = data.inner();
+        let path_ngx = NgxStr::with_pool(pool, path)?;
+        let query_ngx = NgxStr::with_pool(pool, query)?;
+        let unparsed = if query.is_empty() {
+            NgxStr::with_pool(pool, path)?
+        } else {
+            let mut buf = Vec::with_capacity(path.len() + 1 + query.len());
+            buf.extend_from_slice(path);
+            buf.push(b'?');
+            buf.extend_from_slice(query);
+            NgxStr::with_pool(pool, &buf)?
+        };
+
+        self.0.uri = path_ngx.inner();
+        self.0.args = query_ngx.inner();
+        self.0.unparsed_uri = unparsed.inner();
+        self.0.set_valid_unparsed_uri(0);
+
+        Ok(())
     }
 
     pub fn headers_out_ref(&mut self) -> &mut ngx_http_headers_out_t {
@@ -293,6 +316,10 @@ impl<'a> HttpRequest<'a> {
     // TODO:consider either helper or change results to Strings
     pub fn unparsed_uri(&self) -> NgxStr {
         unsafe { NgxStr::from_raw(self.0.unparsed_uri) }
+    }
+
+    pub fn uri(&self) -> NgxStr {
+        unsafe { NgxStr::from_raw(self.0.uri) }
     }
 
     pub fn uri_args(&self) -> NgxStr {
@@ -609,7 +636,7 @@ impl<'a> HttpRequest<'a> {
         anyhow::ensure!(!chain.is_null(), "failed to allocate chain link");
         (*chain).buf = buf;
         (*chain).next = std::ptr::null_mut();
-        let rc =ngx_http_output_filter(self.ptr_mut(), chain);
+        let rc = ngx_http_output_filter(self.ptr_mut(), chain);
 
         Ok(rc)
     }
