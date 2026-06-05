@@ -237,6 +237,8 @@ impl State {
             type_: 0,
             rcvbuf: 0,
             log,
+            hint: std::ptr::null_mut(),
+            sid: std::ptr::null_mut(),
             _bitfield_align_1: Default::default(),
             _bitfield_1: Default::default(),
             __bindgen_padding_0: Default::default(),
