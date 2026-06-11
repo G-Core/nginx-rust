@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 G-Core Innovations SARL
+ * Copyright 2026 G-Core Innovations SARL
  */
 
 #include <ngx_config.h>
