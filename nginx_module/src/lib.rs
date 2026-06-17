@@ -60,6 +60,9 @@ pub use wrappers::{hex_dump, IndexedVar, NgxConfig};
 mod unix_socket;
 pub use unix_socket::{Disconnected, UnixSocket};
 
+mod yamux_unix_socket;
+pub use yamux_unix_socket::YamuxUnixSocket;
+
 mod timer;
 pub use timer::Timer;
 
