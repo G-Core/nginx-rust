@@ -6,21 +6,9 @@ use std::ffi::{c_char, c_void};
 
 use nginx_derive::NginxConfig;
 use nginx_module::{
-    add_http_handler,
-    nginx_version,
-    ngx_command_t,
-    ngx_conf_t,
-    ngx_http_module_t,
-    ngx_module_t,
-    ngx_str_t,
-    HttpHandler,
-    HttpRequestAndContext,
-    NgxConfig,
-    NgxStr,
-    NGX_DECLINED,
-    NGX_HTTP_FORBIDDEN,
-    NGX_HTTP_MODULE,
-    NGX_RS_MODULE_SIGNATURE,
+    add_http_handler, nginx_version, ngx_command_t, ngx_conf_t, ngx_http_module_t, ngx_module_t,
+    ngx_str_t, HttpHandler, HttpRequestAndContext, NgxConfig, NgxStr, NGX_DECLINED,
+    NGX_HTTP_FORBIDDEN, NGX_HTTP_MODULE, NGX_RS_MODULE_SIGNATURE,
 };
 
 static mut COMMANDS: [ngx_command_t; NgxSimple::COMMANDS_COUNT] = NgxSimple::commands();

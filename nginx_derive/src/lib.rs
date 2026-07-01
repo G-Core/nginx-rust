@@ -20,13 +20,12 @@ fn impl_derive_config(input: DeriveInput) -> proc_macro2::TokenStream {
     match input.data {
         syn::Data::Struct(s) => {
             let struct_name = input.ident;
-            
+
             let mut field_defs: Vec<_> = s.fields.iter().filter_map(|f| {
                 let name = f.ident.as_ref()?;
                 let name_nil_terminated = Literal::byte_string((name.to_string() + "\0").as_bytes());
                 let fn_name = format_ident!("set_{name}");
                 let ty_name = &f.ty;
-                
 
                 Some(quote! {
                     ::nginx_module::ngx_command_t {

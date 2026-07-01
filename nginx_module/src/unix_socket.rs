@@ -541,19 +541,19 @@ unsafe extern "C" fn on_read(rev: *mut ngx_event_t) {
 
                         match &mut *state {
                             State::WaitServerHandshake { conn, buffers } => {
-                                let handshake_result = match (*data).check_handshake.try_borrow_mut()
-                                {
-                                    Ok(mut check_handshake) => {
-                                        (check_handshake)(&buf[..result as usize])
-                                    }
-                                    Err(error) => {
-                                        log_borrow_mut_error(
-                                            "on_read: check_handshake borrow",
-                                            error,
-                                        );
-                                        Err(anyhow::anyhow!("Borrow error"))
-                                    }
-                                };
+                                let handshake_result =
+                                    match (*data).check_handshake.try_borrow_mut() {
+                                        Ok(mut check_handshake) => {
+                                            (check_handshake)(&buf[..result as usize])
+                                        }
+                                        Err(error) => {
+                                            log_borrow_mut_error(
+                                                "on_read: check_handshake borrow",
+                                                error,
+                                            );
+                                            Err(anyhow::anyhow!("Borrow error"))
+                                        }
+                                    };
 
                                 match handshake_result {
                                     Ok(_) => {
