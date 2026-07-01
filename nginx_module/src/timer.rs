@@ -23,7 +23,8 @@ impl<HandlerFn> Drop for Timer<HandlerFn> {
             if self.event.timer_set() != 0
                 && ngx_quit == 0
                 && ngx_exiting == 0
-                && ngx_terminate == 0 {
+                && ngx_terminate == 0
+            {
                 ngx_event_del_timer(&mut *self.event.as_mut());
             }
         }

@@ -8,9 +8,7 @@ use bitflags::bitflags;
 
 use crate::{
     bindings::{self, ngx_conf_t, ngx_hex_dump, ngx_http_get_variable_index, ngx_http_variable_t},
-    Log,
-    NgxStr,
-    Pool,
+    Log, NgxStr, Pool,
 };
 
 bitflags! {

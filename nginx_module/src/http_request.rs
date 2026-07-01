@@ -18,16 +18,16 @@ use crate::{
     bindings::{
         ngx_alloc_chain_link, ngx_buf_t, ngx_chain_s, ngx_hash_find, ngx_hash_key,
         ngx_http_core_main_conf_t, ngx_http_core_module, ngx_http_core_run_phases,
-        ngx_http_get_indexed_variable, ngx_http_headers_in_t, ngx_http_headers_out_t,
-        ngx_http_output_filter, ngx_http_parse_multi_header_lines, ngx_http_request_t,
-        ngx_http_send_header, ngx_http_variable_t, ngx_list_part_t, ngx_list_push, ngx_list_t,
-        ngx_module_t, ngx_pcalloc, ngx_posted_events, ngx_table_elt_t,
+        ngx_http_finalize_request, ngx_http_get_indexed_variable, ngx_http_headers_in_t,
+        ngx_http_headers_out_t, ngx_http_output_filter, ngx_http_parse_multi_header_lines,
+        ngx_http_request_t, ngx_http_send_header, ngx_http_variable_t, ngx_list_part_t,
+        ngx_list_push, ngx_list_t, ngx_module_t, ngx_pcalloc, ngx_posted_events, ngx_table_elt_t,
     },
     connection::Connection,
     ngx_post_event, ngx_str_t,
     var::NginxVar,
     wrappers::IndexedVar,
-    Log, NGX_OK,
+    Log, NGX_ERROR, NGX_OK,
 };
 #[cfg(not(nginx_version_1023000))]
 use crate::{
@@ -583,7 +583,12 @@ impl<'a> HttpRequest<'a> {
 
     /// Send a local response with status, headers, and body.
     /// Headers are provided as an iterator of `(key, value)` byte pairs.
-    /// After this call, the phase handler must return `NGX_DONE` (-4).
+    ///
+    /// This does NOT call `ngx_http_finalize_request` — the caller MUST call
+    /// [`HttpRequest::finalize`] (typically with the returned `rc`) after any
+    /// remaining logging, and then return `NGX_DONE` (-4) from the phase
+    /// handler. Without the `finalize` call, the request/connection would leak
+    /// until nginx times it out, eventually exhausting `worker_connections`.
     ///
     /// # Safety
     /// Caller must ensure the request is still valid and no response has been sent yet.
@@ -639,6 +644,23 @@ impl<'a> HttpRequest<'a> {
         let rc = ngx_http_output_filter(self.ptr_mut(), chain);
 
         Ok(rc)
+    }
+
+    /// Finalize the request with the given `rc` by calling `ngx_http_finalize_request`.
+    /// This may close the request and free its memory pool, so callers must ensure no Rust
+    /// references to the request outlive this call.
+    ///
+    /// Typical pattern for a local response from a phase handler:
+    ///
+    /// ```ignore
+    /// let r = request.inner();
+    /// let rc = unsafe { request.send_local_response(status, headers, body) };
+    /// // ... any logging that needs the request ...
+    /// unsafe { HttpRequest::finalize_request(r, rc.unwrap_or(crate::NGX_ERROR as isize)) };
+    /// return NGX_DONE as isize;
+    /// ```
+    pub unsafe fn finalize_request(r: *mut ngx_http_request_t, rc: isize) {
+        ngx_http_finalize_request(r, rc);
     }
 }
 
