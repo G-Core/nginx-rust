@@ -646,25 +646,21 @@ impl<'a> HttpRequest<'a> {
         Ok(rc)
     }
 
-    /// Finalize the request with the given `rc`. This calls
-    /// `ngx_http_finalize_request`, which decrements `r->main->count` and, when
-    /// it reaches zero, closes the request and frees its memory pool. After
-    /// this call the caller MUST NOT touch `self` again — the underlying
-    /// `ngx_http_request_t` may already have been freed.
+    /// Finalize the request with the given `rc` by calling `ngx_http_finalize_request`.
+    /// This may close the request and free its memory pool, so callers must ensure no Rust
+    /// references to the request outlive this call.
     ///
     /// Typical pattern for a local response from a phase handler:
     ///
     /// ```ignore
+    /// let r = request.inner();
     /// let rc = unsafe { request.send_local_response(status, headers, body) };
     /// // ... any logging that needs the request ...
-    /// unsafe { request.finalize(rc.unwrap_or(NGX_ERROR as isize)) };
+    /// unsafe { HttpRequest::finalize_request(r, rc.unwrap_or(crate::NGX_ERROR as isize)) };
     /// return NGX_DONE as isize;
     /// ```
-    ///
-    /// # Safety
-    /// Caller must not use `self` after this call.
-    pub unsafe fn finalize(&mut self, rc: isize) {
-        ngx_http_finalize_request(self.ptr_mut(), rc);
+    pub unsafe fn finalize_request(r: *mut ngx_http_request_t, rc: isize) {
+        ngx_http_finalize_request(r, rc);
     }
 }
 
