@@ -353,13 +353,17 @@ impl Inner {
             } // Already borrowed, skip this send attempt
         };
 
-        if let State::Connected { conn, buffers } = &mut *state {
-            if let Err(Disconnected) = buffers.send(*conn) {
-                *state = State::Disconnected {
-                    event: self.create_and_schedule_reconnect(),
-                    reconnect_timeout: MIN_TIMEOUT_MS,
-                };
+        match &mut *state {
+            State::Connected { conn, buffers }
+            | State::WaitServerHandshake { conn, buffers } => {
+                if let Err(Disconnected) = buffers.send(*conn) {
+                    *state = State::Disconnected {
+                        event: self.create_and_schedule_reconnect(),
+                        reconnect_timeout: MIN_TIMEOUT_MS,
+                    };
+                }
             }
+            State::Disconnected { .. } => {}
         }
     }
 
