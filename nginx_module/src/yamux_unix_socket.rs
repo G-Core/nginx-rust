@@ -722,7 +722,7 @@ unsafe extern "C" fn on_reconnect_timeout(ev: *mut ngx_event_t) {
     } = &mut *state
     {
         if *reconnect_timeout < TIMEOUT_MS {
-            *reconnect_timeout = (*reconnect_timeout) * 2;
+            *reconnect_timeout = (*reconnect_timeout * 2).min(TIMEOUT_MS);
         }
 
         if let Some(conn) = State::try_connect(
