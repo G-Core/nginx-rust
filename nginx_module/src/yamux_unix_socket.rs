@@ -215,8 +215,8 @@ impl State {
         let path = Path::new(path);
 
         let mut len = path.as_os_str().len();
-        if len > sockaddr.sun_path.len() {
-            len = sockaddr.sun_path.len();
+        if len >= sockaddr.sun_path.len() {
+            len = sockaddr.sun_path.len() - 1;
             // TODO: report warning
         }
 
@@ -225,8 +225,9 @@ impl State {
                 path.as_os_str().as_bytes().as_ptr(),
                 sockaddr.sun_path.as_mut_ptr().cast(),
                 len,
-            )
-        };
+            );
+        }
+        sockaddr.sun_path[len] = 0;
 
         let mut name = NgxStr::from(name);
 
