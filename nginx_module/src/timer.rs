@@ -34,6 +34,10 @@ impl<HandlerFn> Drop for Timer<HandlerFn> {
 struct Data<HandlerFn> {
     handler: HandlerFn,
     interval_msec: usize,
+    // nginx debug logging reads ngx_event_ident(ev->data), i.e.
+    // ((ngx_connection_t *) data)->fd — 4 bytes at offset 24; keep the
+    // allocation large enough for that read to stay in bounds
+    _ident_pad: [u8; 32],
 }
 
 impl<HandlerFn: FnMut()> Timer<HandlerFn> {
@@ -44,6 +48,7 @@ impl<HandlerFn: FnMut()> Timer<HandlerFn> {
         let data = Data {
             handler,
             interval_msec,
+            _ident_pad: [0; 32],
         };
         event.data = Box::into_raw(Box::new(data)).cast();
         event.log = unsafe { (*ngx_cycle).log };
